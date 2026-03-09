@@ -1,0 +1,35 @@
+```html
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lỗi - Huy Hoàng Auto 88</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a href="/" class="logo-text">Huy Hoàng auto 88</a>
+                </div>
+                <nav class="nav">
+                    <a href="/" class="nav-link">Trang chủ</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Error Message -->
+    <div class="container" style="padding: 20px;">
+        <h1>Lỗi</h1>
+        <div class="alert alert-danger" th:text="${error ?: 'Đã xảy ra lỗi không mong muốn. Vui lòng thử lại sau.'}"></div>
+        <p><a th:href="@{/}">Quay lại trang chủ</a></p>
+    </div>
+
+    <script th:src="@{/js/script.js}"></script>
+</body>
+</html>

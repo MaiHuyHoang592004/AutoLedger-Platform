@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Đơn Thuê Xe - Car Rental Systerm</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .booking-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-pending_host { background: #fef3c7; color: #d97706; }
+        .status-instant_confirmed { background: #d1fae5; color: #059669; }
+        .status-payment_authorized { background: #dbeafe; color: #2563eb; }
+        .status-in_progress { background: #fef3c7; color: #d97706; }
+        .status-completed { background: #d1fae5; color: #059669; }
+        .status-cancelled_guest { background: #fee2e2; color: #dc2626; }
+        .status-cancelled_host { background: #fee2e2; color: #dc2626; }
+
+        .booking-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .car-info {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .car-image {
+            width: 120px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .car-details h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            color: #111;
+        }
+
+        .booking-dates {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .customer-info {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .customer-info strong {
+            color: #374151;
+        }
+
+        .booking-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: #6366f1; color: white; }
+        .btn-primary:hover { background: #5855eb; }
+
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-warning:hover { background: #d97706; }
+
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .booking-ref {
+            font-size: 12px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .price-info {
+            text-align: right;
+            font-weight: 600;
+            color: #111;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #e5e7eb;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: #6366f1;
+            border-bottom-color: #6366f1;
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: #374151;
+        }
+
+        .payout-info {
+            background: #ecfdf5;
+            border: 1px solid #d1fae5;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 14px;
+            color: #065f46;
+        }
+
+        .payout-info strong {
+            color: #047857;
+        }
+
+        @media (max-width: 768px) {
+            .booking-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .car-info {
+                flex-direction: column;
+            }
+
+            .car-image {
+                width: 100%;
+                height: 120px;
+            }
+
+            .booking-actions {
+                flex-wrap: wrap;
+            }
+
+            .btn-action {
+                flex: 1;
+                min-width: 120px;
+            }
+
+            .tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a th:href="@{/}" style="text-decoration: none; color: inherit;">
+                        <span class="logo-text">Huy Hoàng auto 88</span>
+                    </a>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link">Quản lý đơn</a>
+                </nav>
+                <div class="header-actions">
+                    <button class="menu-btn">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
+                    <div class="user-dropdown-container">
+                        <button class="user-btn">
+                            <span sec:authorize="isAuthenticated()" th:text="${#authentication.name}" class="username-display"></span>
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+
+                        <div class="user-dropdown-menu">
+                            <div sec:authorize="isAuthenticated()">
+                                <a th:href="@{/profile}">Hồ sơ của tôi</a>
+                                <a th:href="@{/change-password}">Đổi mật khẩu</a>
+                                <a th:href="@{/cars/list}" >Quản lý xe</a>
+                                <a th:href="@{/host/bookings}" class="active">Đơn của tôi</a>
+                                <form th:action="@{/logout}" method="post" class="logout-form">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                    <button type="submit" class="logout-button-as-link">Đăng xuất</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+        <div class="container">
+            <div style="margin-bottom: 32px;">
+                <h1 style="margin-bottom: 8px;">Quản Lý Đơn Thuê Xe</h1>
+                <p style="color: #6b7280;">Xem và quản lý tất cả đơn đặt xe cho các xe của bạn</p>
+
+                <!-- Debug Info -->
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 16px; font-size: 14px;">
+                    <strong>Debug Info:</strong><br>
+                    User: <span sec:authorize="isAuthenticated()" th:text="${#authentication.name}" style="color: #059669;"></span><br>
+                    Role: <span sec:authorize="isAuthenticated()" th:text="${#authentication.authorities[0].authority.replace('ROLE_', '') ?: 'N/A'}" style="color: #059669;"></span><br>
+                    User ID: <span th:text="${currentUser.id ?: 'N/A'}" style="color: #059669;"></span><br>
+                    <span id="api-debug" style="color: #dc2626;"></span>
+                </div>
+            </div>
+
+            <!-- Status Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="filterBookings('all')">Tất cả</button>
+                <button class="tab-btn" onclick="filterBookings('pending')">Chờ duyệt</button>
+                <button class="tab-btn" onclick="filterBookings('active')">Đang hoạt động</button>
+                <button class="tab-btn" onclick="filterBookings('upcoming')">Sắp tới</button>
+                <button class="tab-btn" onclick="filterBookings('completed')">Hoàn thành</button>
+                <button class="tab-btn" onclick="filterBookings('cancelled')">Đã hủy</button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Đang tải dữ liệu...</p>
+            </div>
+
+            <!-- Bookings List -->
+            <div id="bookings-container">
+                <!-- Bookings will be loaded here via JavaScript -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <i class="fas fa-calendar-times"></i>
+                <h3>Chưa có đơn đặt xe nào</h3>
+                <p>Chưa có khách hàng đặt xe của bạn. Hãy quảng bá xe để thu hút khách hàng!</p>
+                <a th:href="@{/cars/add}" class="btn-action btn-primary" style="display: inline-block; margin-top: 16px;">
+                    <i class="fas fa-plus"></i> Thêm xe mới
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>©2025 Car Rental Systerm </p>
+                <div class="footer-links">
+                    <a href="#">Điều khoản dịch vụ</a>
+                    <a href="#">Chính sách bảo mật</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal for booking actions -->
+    <div id="action-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 24px; border-radius: 12px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <h3 id="modal-title">Xác nhận hành động</h3>
+            <p id="modal-message">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+            <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
+                <button onclick="closeModal()" class="btn-action btn-secondary">Hủy</button>
+                <button id="confirm-action" class="btn-action btn-primary">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/script.js}"></script>
+    <script>
+        let allBookings = [];
+        let currentFilter = 'all';
+
+        // Get CSRF token
+        function getCsrfToken() {
+            const token = document.querySelector('meta[name="_csrf"]');
+            const header = document.querySelector('meta[name="_csrf_header"]');
+            return {
+                token: token ? token.getAttribute('content') : null,
+                header: header ? header.getAttribute('content') : null
+            };
+        }
+
+        // Load bookings on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBookings();
+        });
+
+        async function loadBookings() {
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('bookings-container');
+            const emptyState = document.getElementById('empty-state');
+
+            loading.style.display = 'block';
+            container.innerHTML = '';
+
+            try {
+                const response = await fetch('/host/api/bookings', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // Debug API response
+                const debugElement = document.getElementById('api-debug');
+                debugElement.textContent = `API Status: ${response.status} ${response.statusText}`;
+
+                if (response.ok) {
+                    allBookings = await response.json();
+                    debugElement.textContent += ` | Bookings: ${allBookings.length}`;
+                    displayBookings(allBookings);
+                } else {
+                    const errorText = await response.text();
+                    debugElement.textContent += ` | Error: ${errorText}`;
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+                const debugElement = document.getElementById('api-debug');
+                debugElement.textContent += ` | Exception: ${error.message}`;
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Lỗi tải dữ liệu</h3><p>Vui lòng thử lại sau.</p></div>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayBookings(bookings) {
+            const container = document.getElementById('bookings-container');
+            const emptyState = document.getElementById('empty-state');
+
+            if (!bookings || bookings.length === 0) {
+                emptyState.style.display = 'block';
+                container.innerHTML = '';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            container.innerHTML = bookings.map(booking => createBookingCard(booking)).join('');
+        }
+
+        function createBookingCard(booking) {
+            const statusClass = getStatusClass(booking.status);
+            const statusText = getStatusText(booking.status);
+            const actions = getBookingActions(booking);
+
+            const startDate = new Date(booking.startAt).toLocaleDateString('vi-VN');
+            const endDate = new Date(booking.endAt).toLocaleDateString('vi-VN');
+            const payoutAmount = calculatePayout(booking);
+
+            return `
+                <div class="booking-card">
+                    <div class="booking-header">
+                        <div class="booking-ref">Đơn #${booking.id}</div>
+                        <span class="booking-status ${statusClass}">${statusText}</span>
+                    </div>
+
+                    <div class="car-info">
+                        <img src="${booking.carImageUrls && booking.carImageUrls.length > 0 ? booking.carImageUrls[0] : '/images/no-image.png'}" alt="Car" class="car-image">
+                        <div class="car-details">
+                            <h3>${booking.carMake || 'N/A'} ${booking.carModel || 'N/A'} ${booking.carYear || ''}</h3>
+                            <div class="booking-dates">
+                                <i class="fas fa-calendar"></i> ${startDate} - ${endDate}
+                            </div>
+                            <div class="price-info">
+                                Tổng: ${formatCurrency(booking.totalAmount || 0)} VND
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="customer-info">
+                        <strong>Khách hàng:</strong> ${booking.guestEmail || 'N/A'}<br>
+                        <strong>Điện thoại:</strong> ${booking.guestPhone || 'Chưa cập nhật'}
+                    </div>
+
+                    ${payoutAmount > 0 ? `<div class="payout-info">
+                        <strong>Dự kiến nhận:</strong> ${formatCurrency(payoutAmount)} VND (sau khi hoàn thành)
+                    </div>` : ''}
+
+                    <div class="booking-actions">
+                        ${actions}
+                    </div>
+                </div>
+            `;
+        }
+
+        function getStatusClass(status) {
+            const classes = {
+                'PENDING_HOST': 'status-pending_host',
+                'INSTANT_CONFIRMED': 'status-instant_confirmed',
+                'PAYMENT_AUTHORIZED': 'status-payment_authorized',
+                'IN_PROGRESS': 'status-in_progress',
+                'COMPLETED': 'status-completed',
+                'CANCELLED_GUEST': 'status-cancelled_guest',
+                'CANCELLED_HOST': 'status-cancelled_host'
+            };
+            return classes[status] || 'status-pending_host';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'PENDING_HOST': 'Chờ duyệt',
+                'INSTANT_CONFIRMED': 'Đã xác nhận',
+                'PAYMENT_AUTHORIZED': 'Đã thanh toán',
+                'IN_PROGRESS': 'Đang diễn ra',
+                'COMPLETED': 'Hoàn thành',
+                'CANCELLED_GUEST': 'Khách hủy',
+                'CANCELLED_HOST': 'Bạn hủy'
+            };
+            return texts[status] || status;
+        }
+
+        function getBookingActions(booking) {
+            const actions = [];
+            const status = booking.status;
+
+            // Always add view details button
+            actions.push(`<button class="btn-action btn-secondary" onclick="viewDetails(${booking.id})">Chi tiết</button>`);
+
+            switch (status) {
+                case 'PENDING_HOST':
+                    actions.push(`<button class="btn-action btn-success" onclick="confirmBooking(${booking.id})">Duyệt đơn</button>`);
+                    actions.push(`<button class="btn-action btn-danger" onclick="rejectBooking(${booking.id})">Từ chối</button>`);
+                    break;
+
+                case 'PAYMENT_AUTHORIZED':
+                    actions.push(`<button class="btn-action btn-warning" onclick="startCheckIn(${booking.id})">Check-in</button>`);
+                    actions.push(`<button class="btn-action btn-danger" onclick="cancelBooking(${booking.id}, true)">Hủy đơn</button>`);
+                    break;
+
+                case 'IN_PROGRESS':
+                    actions.push(`<button class="btn-action btn-primary" onclick="checkOut(${booking.id})">Check-out</button>`);
+                    break;
+
+                case 'COMPLETED':
+                    actions.push(`<button class="btn-action btn-secondary" onclick="viewPayout(${booking.id})">Thanh toán</button>`);
+                    actions.push(`<button class="btn-action btn-primary" onclick="writeReview(${booking.id})">Đánh giá</button>`);
+                    break;
+
+                default:
+                    // View details already added above
+                    break;
+            }
+
+            return actions.join('');
+        }
+
+        function filterBookings(filter) {
+            currentFilter = filter;
+
+            // Update tab active state
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            let filteredBookings = allBookings;
+
+            switch (filter) {
+                case 'pending':
+                    filteredBookings = allBookings.filter(b => b.status === 'PENDING_HOST');
+                    break;
+                case 'active':
+                    filteredBookings = allBookings.filter(b =>
+                        ['PAYMENT_AUTHORIZED', 'IN_PROGRESS'].includes(b.status)
+                    );
+                    break;
+                case 'upcoming':
+                    filteredBookings = allBookings.filter(b =>
+                        ['INSTANT_CONFIRMED'].includes(b.status)
+                    );
+                    break;
+                case 'completed':
+                    filteredBookings = allBookings.filter(b => b.status === 'COMPLETED');
+                    break;
+                case 'cancelled':
+                    filteredBookings = allBookings.filter(b =>
+                        b.status.startsWith('CANCELLED')
+                    );
+                    break;
+            }
+
+            displayBookings(filteredBookings);
+        }
+
+        async function confirmBooking(bookingId) {
+            await performBookingAction(bookingId, 'confirm', 'Duyệt đơn đặt xe này?');
+        }
+
+        async function rejectBooking(bookingId) {
+            await performBookingAction(bookingId, 'reject', 'Từ chối đơn đặt xe này?');
+        }
+
+        function startCheckIn(bookingId) {
+            window.location.href = `/bookings/${bookingId}/checkin-host`;
+        }
+
+        function checkOut(bookingId) {
+            window.location.href = `/bookings/${bookingId}/checkout-host`;
+        }
+
+        async function cancelBooking(bookingId, isHostCancellation = true) {
+            await performBookingAction(bookingId, 'cancel', 'Hủy đơn đặt xe này?', isHostCancellation, true);
+        }
+
+        async function performBookingAction(bookingId, action, message, isHostCancellation = false, skipConfirm = false) {
+            if (!skipConfirm && !confirm(message)) return;
+
+            showLoading(null, 'Đang xử lý...');
+
+            try {
+                const idempotencyKey = generateIdempotencyKey();
+                let url = `/host/api/bookings/${bookingId}/${action}`;
+
+                if (action === 'cancel') {
+                    url += `?isHostCancellation=${isHostCancellation}`;
+                }
+
+                const csrf = getCsrfToken();
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Idempotency-Key': idempotencyKey
+                };
+
+                if (csrf.token && csrf.header) {
+                    headers[csrf.header] = csrf.token;
+                }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: headers
+                });
+
+                if (response.ok) {
+                    showToast('Thao tác thành công!', 'success');
+                    loadBookings(); // Reload bookings
+                } else {
+                    const error = await response.text();
+                    throw new Error(error || 'Thao tác thất bại');
+                }
+            } catch (error) {
+                console.error('Action error:', error);
+                showToast(error.message || 'Có lỗi xảy ra', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function viewDetails(bookingId) {
+            window.location.href = `/bookings/${bookingId}`;
+        }
+
+        function viewPayout(bookingId) {
+            // TODO: Show payout details modal
+            alert('Tính năng xem chi tiết thanh toán sẽ được thêm sau');
+        }
+
+        function writeReview(bookingId) {
+            window.location.href = `/bookings/${bookingId}/reviews`;
+        }
+
+        function calculateTotal(booking) {
+            // Simple calculation - in real app, get from charges
+            const days = Math.ceil((new Date(booking.endAt) - new Date(booking.startAt)) / (1000 * 60 * 60 * 24));
+            return days * (booking.listing?.price24hCents || 0);
+        }
+
+        function calculatePayout(booking) {
+            // Estimate payout: total - platform_fee - tax
+            const total = calculateTotal(booking);
+            const platformFee = Math.round(total * 0.1); // 10%
+            const tax = 0; // No tax for demo
+            return Math.max(0, total - platformFee - tax);
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN').format(amount);
+        }
+
+        function generateIdempotencyKey() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function showLoading(element, message = 'Đang tải...') {
+            // Create loading overlay
+            const loading = document.createElement('div');
+            loading.className = 'loading-overlay';
+            loading.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(255,255,255,0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+            `;
+
+            loading.innerHTML = `
+                <div style="text-align: center;">
+                    <div class="spinner" style="
+                        border: 4px solid #f3f4f6;
+                        border-top: 4px solid #6366f1;
+                        border-radius: 50%;
+                        width: 40px;
+                        height: 40px;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto 16px;
+                    "></div>
+                    <p style="color: #374151; font-size: 16px;">${message}</p>
+                </div>
+            `;
+
+            document.body.appendChild(loading);
+            return loading;
+        }
+
+        function hideLoading() {
+            const loading = document.querySelector('.loading-overlay');
+            if (loading) {
+                loading.remove();
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('action-modal').style.display = 'none';
+        }
+
+        // Enhanced toast function
+        function showToast(message, type = 'success') {
+            // Remove existing toast
+            const existingToast = document.querySelector('.toast-notification');
+            if (existingToast) existingToast.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                min-width: 300px;
+            `;
+            toast.innerHTML = `
+                <div class="toast ${type}" role="alert" style="
+                    background: ${type === 'success' ? '#d1fae5' : '#fee2e2'};
+                    border: 1px solid ${type === 'success' ? '#a7f3d0' : '#fecaca'};
+                    border-radius: 8px;
+                    padding: 12px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                ">
+                    <div class="toast-header" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 8px;
+                    ">
+                        <strong style="color: ${type === 'success' ? '#065f46' : '#991b1b'};">
+                            ${type === 'success' ? 'Thành công' : 'Lỗi'}
+                        </strong>
+                        <button type="button" class="btn-close" onclick="this.parentElement.parentElement.parentElement.remove()" style="
+                            background: none;
+                            border: none;
+                            font-size: 18px;
+                            cursor: pointer;
+                            color: #6b7280;
+                        ">×</button>
+                    </div>
+                    <div class="toast-body" style="color: ${type === 'success' ? '#065f46' : '#991b1b'};">
+                        ${message}
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

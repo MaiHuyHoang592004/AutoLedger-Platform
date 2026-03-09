@@ -1,0 +1,92 @@
+<!-- src/main/resources/templates/host/host-bookings.html -->
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý đơn đặt xe</title>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+    <style>
+        .booking-card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .status-pending { background: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .btn-confirm { background: #28a745; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-reject { background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <header th:replace="~{fragments/header :: header}"></header>
+
+    <main class="container" style="margin-top: 40px;">
+        <h2>Đơn đặt xe của bạn</h2>
+
+        <div th:each="booking : ${bookings}" class="booking-card">
+            <p><strong>Booking ID:</strong> <span th:text="${booking.id}"></span></p>
+            <p><strong>Khách:</strong> <span th:text="${booking.guest.email}"></span> (<span th:text="${booking.guest.phone}"></span>)</p>
+            <p><strong>Xe:</strong> <span th:text="${booking.listing.vehicle.make + ' ' + booking.listing.vehicle.model}"></span></p>
+            <p><strong>Thời gian:</strong> 
+                <span th:text="${#temporals.format(booking.startAt, 'dd/MM/yyyy HH:mm')}"></span> → 
+                <span th:text="${#temporals.format(booking.endAt, 'dd/MM/yyyy HH:mm')}"></span>
+            </p>
+            <p><strong>Trạng thái:</strong> 
+                <span th:text="${booking.status}" th:class="${booking.status == 'PENDING_HOST'} ? 'status-pending' : ''"></span>
+            </p>
+
+            <div th:if="${booking.status == 'PENDING_HOST'}" style="margin-top: 12px;">
+                <button class="btn-confirm" th:onclick="'approveBooking(' + ${booking.id} + ')'">Xác nhận</button>
+                <button class="btn-reject" th:onclick="'rejectBooking(' + ${booking.id} + ')'">Từ chối</button>
+            </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(bookings)}">
+            <p>Chưa có đơn đặt nào.</p>
+        </div>
+    </main>
+
+    <script>
+        async function approveBooking(bookingId) {
+            if (!confirm("Xác nhận đơn đặt xe này?")) return;
+
+            const idempotencyKey = crypto.randomUUID();
+            const response = await fetch(`/bookings/api/${bookingId}/approve`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Idempotency-Key': idempotencyKey,
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').content
+                }
+            });
+
+            if (response.ok) {
+                alert("Đã xác nhận!");
+                location.reload();
+            } else {
+                const error = await response.text();
+                alert("Lỗi: " + error);
+            }
+        }
+
+        async function rejectBooking(bookingId) {
+            if (!confirm("Từ chối đơn đặt xe này?")) return;
+
+            const idempotencyKey = crypto.randomUUID();
+            const response = await fetch(`/bookings/api/${bookingId}/reject`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Idempotency-Key': idempotencyKey,
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').content
+                }
+            });
+
+            if (response.ok) {
+                alert("Đã từ chối!");
+                location.reload();
+            } else {
+                const error = await response.text();
+                alert("Lỗi: " + error);
+            }
+        }
+    </script>
+</body>
+</html>

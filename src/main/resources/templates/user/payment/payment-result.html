@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Kết quả thanh toán</title>
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: "Segoe UI", sans-serif;
+            margin: 0;
+            padding: 40px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .success {
+            color: #28a745;
+        }
+        .failed {
+            color: #dc3545;
+        }
+        .btn-back {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2 th:if="${status == 'success'}" class="success">✅ Thanh toán thành công!</h2>
+    <h2 th:if="${status == 'failed'}" class="failed">❌ Thanh toán thất bại!</h2>
+
+    <div th:if="${booking != null}">
+        <p><strong>Mã đơn hàng:</strong> <span th:text="${booking.id}"></span></p>
+        <p><strong>Phương thức:</strong> <span th:text="${paymentMethod}"></span></p>
+        <p><strong>Tổng tiền:</strong> <span th:text="${booking.totalAmountVND} + ' VND'"></span></p>
+        <p><strong>Trạng thái đơn:</strong> <span th:text="${booking.status}"></span></p>
+    </div>
+
+    <p th:if="${status == 'failed'}">
+        Vui lòng thử lại hoặc chọn phương thức khác.
+    </p>
+
+    <a th:href="@{/bookings}" class="btn btn-primary btn-back">Quay lại danh sách đơn</a>
+</div>
+</body>
+</html>

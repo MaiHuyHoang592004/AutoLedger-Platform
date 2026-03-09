@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác nhận đơn hàng - Car Rental Online</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #F4FFF9;
+            color: #1A2B3C;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 70px;
+            padding: 0 16px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: #28C07B;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .nav-link {
+            color: #5A6A79;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 24px;
+            transition: all 0.2s;
+        }
+
+        .nav-link.active {
+            background: #28C07B;
+            color: white;
+        }
+
+        .nav-link:hover {
+            background: #E7EFF4;
+            color: #1A2B3C;
+        }
+
+        .action-links {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .action-link {
+            color: #5A6A79;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 24px;
+            transition: all 0.2s;
+        }
+
+        .action-link:hover {
+            background: #E7EFF4;
+        }
+
+        .account-btn {
+            background: #28C07B;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 24px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* Progress Tracker */
+        .progress-tracker {
+            background: #F4FFF9;
+            padding: 24px 0;
+            margin-bottom: 32px;
+        }
+
+        .progress-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 80px;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .step-circle.completed {
+            background: #28C07B;
+            color: white;
+        }
+
+        .step-circle.active {
+            background: #28C07B;
+            color: white;
+            box-shadow: 0 0 0 4px rgba(40, 192, 123, 0.2);
+        }
+
+        .step-circle.pending {
+            background: white;
+            color: #5A6A79;
+            border: 2px solid #E7EFF4;
+        }
+
+        .step-label {
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .step-label.active {
+            color: #28C07B;
+            font-weight: 600;
+        }
+
+        .step-label.completed {
+            color: #28C07B;
+        }
+
+        .step-label.pending {
+            color: #5A6A79;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 2px;
+            background: #E7EFF4;
+            position: relative;
+        }
+
+        .progress-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: #28C07B;
+            width: 33%; /* 1 out of 3 steps completed */
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 32px;
+            margin-bottom: 64px;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .card-section {
+            padding: 32px;
+        }
+
+        .card-section:not(:last-child) {
+            border-bottom: 1px solid #E7EFF4;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #1A2B3C;
+        }
+
+        /* Car Info */
+        .car-info {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .car-image {
+            width: 200px;
+            height: 150px;
+            background: #F7FAFC;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #5A6A79;
+            flex-shrink: 0;
+        }
+
+        .car-details {
+            flex: 1;
+        }
+
+        .car-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1A2B3C;
+            margin-bottom: 8px;
+        }
+
+        .car-specs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .spec-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .spec-label {
+            color: #5A6A79;
+        }
+
+        .spec-value {
+            font-weight: 500;
+        }
+
+        /* Booking Info */
+        .booking-info {
+            background: #F7FAFC;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-label {
+            color: #5A6A79;
+            font-size: 14px;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #1A2B3C;
+        }
+
+        /* Price Breakdown */
+        .price-breakdown {
+            background: #F7FAFC;
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #E7EFF4;
+        }
+
+        .breakdown-item:last-child {
+            border-bottom: none;
+            font-weight: 600;
+            color: #28C07B;
+            font-size: 18px;
+        }
+
+        .breakdown-label {
+            color: #5A6A79;
+        }
+
+        .breakdown-value {
+            font-weight: 500;
+        }
+
+        /* Actions */
+        .actions {
+            text-align: center;
+            margin-top: 32px;
+        }
+
+        .btn-primary {
+            background: #28C07B;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary:hover {
+            background: #218a5f;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #5A6A79;
+            border: 2px solid #E7EFF4;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-left: 16px;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #F7FAFC;
+            border-color: #5A6A79;
+        }
+
+        .action-note {
+            color: #5A6A79;
+            font-size: 14px;
+            margin-top: 12px;
+        }
+
+        /* Footer */
+        .footer {
+            background: white;
+            border-top: 1px solid #E7EFF4;
+            padding: 24px 0;
+            text-align: center;
+            color: #5A6A79;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .car-info {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .car-image {
+                width: 100%;
+                height: 200px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .actions {
+                text-align: center;
+            }
+
+            .btn-secondary {
+                margin-left: 0;
+                margin-top: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">Car Rental Online</div>
+                <nav class="nav-links">
+                    <a href="#" class="nav-link">Tìm và chọn xe</a>
+                    <a href="#" class="nav-link active">Xác nhận đơn hàng</a>
+                    <a href="#" class="nav-link">Thanh toán giữ chỗ</a>
+                    <a href="#" class="nav-link">Tạo đặt xe</a>
+                </nav>
+                <div class="action-links">
+                    <a href="#" class="action-link">Ký gửi xe</a>
+                    <a href="#" class="action-link">Blog</a>
+                    <a href="#" class="action-link">Hỏi đáp</a>
+                    <button class="account-btn">Tài khoản</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Progress Tracker -->
+    <section class="progress-tracker">
+        <div class="container">
+            <div class="progress-container">
+                <div class="progress-step">
+                    <div class="step-circle completed">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="step-label completed">Tìm và chọn xe</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle active">2</div>
+                    <div class="step-label active">Xác nhận đơn hàng</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle pending">3</div>
+                    <div class="step-label pending">Thanh toán giữ chỗ</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle pending">4</div>
+                    <div class="step-label pending">Tạo đặt xe</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="main-content">
+            <!-- Left Column -->
+            <div class="left-column">
+                <!-- Car Information -->
+                <div class="content-card">
+                    <div class="card-section">
+                        <h2 class="section-title">Thông tin xe đã chọn</h2>
+
+                        <div class="car-info">
+                            <div class="car-image">
+                                <i class="fas fa-car" style="font-size: 48px;"></i>
+                            </div>
+                            <div class="car-details">
+                                <div class="car-title" th:text="${car.make ?: 'N/A'} + ' ' + ${car.model ?: 'N/A'} + ' ' + ${car.year ?: 'N/A'}">Toyota Camry 2020</div>
+                                <div class="car-specs">
+                                    <div class="spec-item">
+                                        <span class="spec-label">Hộp số:</span>
+                                        <span class="spec-value" th:text="${car.transmission ?: 'N/A'}">Tự động</span>
+                                    </div>
+                                    <div class="spec-item">
+                                        <span class="spec-label">Nhiên liệu:</span>
+                                        <span class="spec-value" th:text="${car.fuelType ?: 'N/A'}">Xăng</span>
+                                    </div>
+                                    <div class="spec-item">
+                                        <span class="spec-label">Số ghế:</span>
+                                        <span class="spec-value" th:text="${car.seats ?: 'N/A'}">5</span>
+                                    </div>
+                                    <div class="spec-item">
+                                        <span class="spec-label">Địa điểm:</span>
+                                        <span class="spec-value" th:text="${car.city ?: 'N/A'}">Hà Nội</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Booking Details -->
+                <div class="content-card">
+                    <div class="card-section">
+                        <h3 class="section-title">Chi tiết thuê xe</h3>
+
+                        <div class="booking-info">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Ngày nhận xe</span>
+                                    <span class="info-value" th:text="${pickupDate ?: 'Chưa chọn'}">15/11/2024</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Ngày trả xe</span>
+                                    <span class="info-value" th:text="${returnDate ?: 'Chưa chọn'}">18/11/2024</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Số ngày thuê</span>
+                                    <span class="info-value" th:text="${days ?: 0} + ' ngày'">3 ngày</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Địa điểm giao nhận</span>
+                                    <span class="info-value" th:text="${car.city ?: 'N/A'}">Hà Nội</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="right-column">
+                <!-- Price Breakdown -->
+                <div class="content-card price-breakdown">
+                    <div class="card-section">
+                        <h3 class="section-title">Thanh toán</h3>
+
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">Giá thuê xe (<span th:text="${days ?: 0}">3</span> ngày)</span>
+                            <span class="breakdown-value" th:text="${rentalPrice != null ? #numbers.formatDecimal(rentalPrice, 0, 'COMMA', 0, 'POINT') + '₫' : '0₫'}">1.200.000₫</span>
+                        </div>
+
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">Phí nền tảng (10%)</span>
+                            <span class="breakdown-value" th:text="${serviceFee != null ? #numbers.formatDecimal(serviceFee, 0, 'COMMA', 0, 'POINT') + '₫' : '0₫'}">120.000₫</span>
+                        </div>
+
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">Thuế</span>
+                            <span class="breakdown-value" th:text="${tax != null ? #numbers.formatDecimal(tax, 0, 'COMMA', 0, 'POINT') + '₫' : '0₫'}">0₫</span>
+                        </div>
+
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">Tổng cộng</span>
+                            <span class="breakdown-value" th:text="${totalPrice != null ? #numbers.formatDecimal(totalPrice, 0, 'COMMA', 0, 'POINT') + '₫' : '0₫'}">1.320.000₫</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="content-card">
+                    <div class="card-section">
+                        <div class="actions">
+                            <a th:href="@{'/booking/payment-hold?carId=' + ${car.id} + '&pickupDate=' + ${pickupDate ?: ''} + '&returnDate=' + ${returnDate ?: ''} + '&totalAmount=' + ${totalPrice ?: 0}}" class="btn-primary">
+                                <i class="fas fa-arrow-right"></i> Tiếp tục thanh toán
+                            </a>
+                            <a href="/search" class="btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Quay lại tìm xe
+                            </a>
+                        </div>
+                        <div class="action-note">
+                            Bạn sẽ được chuyển đến trang thanh toán giữ chỗ để hoàn tất đặt xe
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Car Rental Online. Tất cả quyền được bảo lưu.</p>
+        </div>
+    </footer>
+</body>
+</html>
+
+        <!-- Thông tin xe -->
+        <div class="car-info">
+            <h3>Thông tin xe</h3>
+            <p>Hãng xe: <span th:text="${car.make ?: 'N/A'}"></span></p>
+            <p>Model: <span th:text="${car.model ?: 'N/A'}"></span></p>
+            <p>Năm: <span th:text="${car.year ?: 'N/A'}"></span></p>
+            <p>Hộp số: <span th:text="${car.transmission ?: 'N/A'}"></span></p>
+            <p>Nhiên liệu: <span th:text="${car.fuelType ?: 'N/A'}"></span></p>
+            <img th:src="${car.imageUrl ?: 'https://via.placeholder.com/400x300?text=No+Image'}" alt="Hình ảnh xe" style="max-width: 300px; border-radius: 8px;">
+        </div>
+
+        <!-- Thông tin thuê -->
+        <div class="booking-info">
+            <h3>Thông tin thuê</h3>
+            <p>Ngày nhận xe: <span th:text="${pickupDate ?: 'Chưa chọn'}"></span></p>
+            <p>Ngày trả xe: <span th:text="${returnDate ?: 'Chưa chọn'}"></span></p>
+            <p>Số ngày thuê: <span th:text="${days ?: 0}"></span></p>
+            <p>Địa điểm: <span th:text="${car.city ?: 'N/A'}"></span></p>
+        </div>
+
+        <!-- Giá chi tiết -->
+        <div class="price-details">
+            <h3>Chi tiết thanh toán</h3>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                <p><strong>Giá thuê xe:</strong> <span th:text="${rentalPrice != null ? #numbers.formatDecimal(rentalPrice, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}"></span></p>
+                <p><strong>Phí dịch vụ (10%):</strong> <span th:text="${serviceFee != null ? #numbers.formatDecimal(serviceFee, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}"></span></p>
+                <p><strong>Thuế:</strong> <span th:text="${tax != null ? #numbers.formatDecimal(tax, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}"></span></p>
+                <hr style="margin: 10px 0;">
+                <p style="font-size: 18px; font-weight: bold; color: #28C07B;"><strong>Tổng cộng:</strong> <span th:text="${totalPrice != null ? #numbers.formatDecimal(totalPrice, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}"></span></p>
+            </div>
+        </div>
+
+        <!-- Nút xác nhận và thanh toán -->
+        <div style="text-align: center; margin-top: 30px;">
+            <a th:href="@{'/booking/payment-hold?carId=' + ${car.id} + '&pickupDate=' + ${pickupDate ?: ''} + '&returnDate=' + ${returnDate ?: ''} + '&totalAmount=' + ${totalPrice ?: 0}}" class="btn btn-primary" style="padding: 12px 30px; font-size: 16px; border-radius: 8px;">Xác nhận và Thanh toán</a>
+            <br>
+            <small style="color: #666; margin-top: 10px; display: block;">Bạn sẽ được chuyển đến trang thanh toán giữ chỗ</small>
+        </div>
+    </div>
+
+    <script th:src="@{/js/script.js}"></script>
+</body>
+</html>

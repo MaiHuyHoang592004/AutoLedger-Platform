@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đặt Xe - Car Rental System</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .booking-form-container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .car-summary {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 32px;
+        }
+
+        .car-image {
+            width: 120px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .car-details h3 {
+            margin: 0 0 8px 0;
+            font-size: 20px;
+            color: #111;
+        }
+
+        .car-details p {
+            margin: 4px 0;
+            color: #6b7280;
+        }
+
+        .form-section {
+            margin-bottom: 32px;
+        }
+
+        .form-section h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #111;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group input.error,
+        .form-group select.error {
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
+        .error-message {
+            color: #dc2626;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .price-summary {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0f2fe;
+        }
+
+        .price-row:last-child {
+            border-bottom: none;
+            font-weight: 600;
+            font-size: 18px;
+            color: #0c4a6e;
+        }
+
+        .price-amount {
+            font-weight: 500;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-submit:hover {
+            background: #059669;
+        }
+
+        .btn-submit:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .booking-form-container {
+                margin: 20px;
+                padding: 20px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .car-summary {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .car-image {
+                width: 100%;
+                height: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a th:href="@{/}" style="text-decoration: none; color: inherit;">
+                        <span class="logo-text">Car Rental System</span>
+                    </a>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link">Đặt xe</a>
+                </nav>
+                <div class="header-actions">
+                    <button class="menu-btn">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
+                    <div class="user-dropdown-container">
+                        <button class="user-btn">
+                            <span sec:authorize="isAuthenticated()" th:text="${#authentication.name}" class="username-display"></span>
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+
+                        <div class="user-dropdown-menu">
+                            <div sec:authorize="isAuthenticated()">
+                                <a th:href="@{/profile}">Hồ sơ của tôi</a>
+                                <a th:href="@{/change-password}">Đổi mật khẩu</a>
+                                <a th:href="@{/bookings/my-bookings}">Đơn của tôi</a>
+                                <form th:action="@{/logout}" method="post" class="logout-form">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                    <button type="submit" class="logout-button-as-link">Đăng xuất</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="booking-form-container">
+            <h1 style="text-align: center; margin-bottom: 8px;">Đặt Xe</h1>
+            <p style="text-align: center; color: #6b7280; margin-bottom: 32px;">
+                Xác nhận thông tin và hoàn tất đặt xe
+            </p>
+
+            <!-- Success/Error Messages -->
+            <div th:if="${success}" class="alert alert-success" style="padding: 12px; background: #d1fae5; color: #065f46; border-radius: 6px; margin-bottom: 20px;">
+                <i class="fas fa-check-circle"></i> <span th:text="${success}"></span>
+            </div>
+            <div th:if="${error}" class="alert alert-error" style="padding: 12px; background: #fee2e2; color: #dc2626; border-radius: 6px; margin-bottom: 20px;">
+                <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
+            </div>
+
+            <!-- Car Summary -->
+            <div class="car-summary">
+                <!-- Thay thế hoàn toàn dòng img cũ -->
+<img th:src="${!#lists.isEmpty(listing.vehicle.imageUrls) 
+    ? listing.vehicle.imageUrls[0] 
+    : '/images/default-car.jpg'}"
+     alt="Xe thuê"
+     class="img-fluid rounded shadow"
+     style="width: 100%; height: 320px; object-fit: cover;" />
+                <div class="car-details">
+                    <h3 th:text="${listing.vehicle.make} + ' ' + ${listing.vehicle.model} + ' ' + ${listing.vehicle.year ?: ''}">Vehicle Name</h3>
+                    <p><i class="fas fa-map-marker-alt"></i> <span th:text="${listing.homeCity}">Location</span></p>
+                    <p><i class="fas fa-gas-pump"></i> <span th:text="${listing.vehicle.fuelType}">Fuel Type</span> •
+                       <i class="fas fa-cog"></i> <span th:text="${listing.vehicle.transmission}">Transmission</span> •
+                       <i class="fas fa-users"></i> <span th:text="${listing.vehicle.seats}">Seats</span> chỗ</p>
+                </div>
+            </div>
+
+            <form th:action="@{/bookings/create}" method="post">
+                <input type="hidden" name="listingId" th:value="${listing.id}">
+
+                <!-- Booking Details -->
+                <div class="form-section">
+                    <h3><i class="fas fa-calendar"></i> Chi Tiết Đặt Xe</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="pickupDate">Ngày nhận xe</label>
+                            <input type="date" id="pickupDate" name="pickupDate" th:value="${pickupDate}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="pickupTime">Giờ nhận xe</label>
+                            <input type="time" id="pickupTime" name="pickupTime" th:value="${pickupTime ?: '09:00'}" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="returnDate">Ngày trả xe</label>
+                            <input type="date" id="returnDate" name="returnDate" th:value="${returnDate}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="returnTime">Giờ trả xe</label>
+                            <input type="time" id="returnTime" name="returnTime" th:value="${returnTime ?: '18:00'}" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Price Summary -->
+                <div class="form-section">
+                    <h3><i class="fas fa-receipt"></i> Tóm Tắt Giá</h3>
+                    <div class="price-summary">
+                        <div class="price-row">
+                            <span>Giá thuê cơ bản (<span id="days">0</span> ngày)</span>
+                            <span class="price-amount" id="base-price">0 VND</span>
+                        </div>
+                        <div class="price-row">
+                            <span>Phí nền tảng (10%)</span>
+                            <span class="price-amount" id="platform-fee">0 VND</span>
+                        </div>
+                        <div class="price-row">
+                            <span><strong>Tổng cộng</strong></span>
+                            <span class="price-amount" id="total-price"><strong>0 VND</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn-submit" id="submit-btn">
+                    <i class="fas fa-arrow-right"></i> Tiếp Tục Thanh Toán
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>©2025 Car Rental System</p>
+                <div class="footer-links">
+                    <a href="#">Điều khoản dịch vụ</a>
+                    <a href="#">Chính sách bảo mật</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script th:src="@{/js/script.js}"></script>
+    <script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        // FIX 1 + 2 + 3: Dùng cú pháp đúng + fallback an toàn
+        const dailyRate = Number(/*[[${dailyRate ?: 0}]]*/ 0);
+
+        
+        const pickupDateInput = document.getElementById('pickupDate');
+        const returnDateInput = document.getElementById('returnDate');
+        const pickupTimeInput = document.getElementById('pickupTime');
+        const returnTimeInput = document.getElementById('returnTime');
+        const submitBtn = document.getElementById('submit-btn');
+        const form = document.getElementById('booking-form');
+
+        function validateDates() {
+            // ... giữ nguyên phần validate cũ của bạn
+            let isValid = true;
+            document.querySelectorAll('.error-message').forEach(msg => msg.classList.remove('show'));
+            document.querySelectorAll('.form-group input').forEach(input => input.classList.remove('error'));
+
+            if (!pickupDateInput.value) { document.getElementById('pickupDate-error').classList.add('show'); pickupDateInput.classList.add('error'); isValid = false; }
+            if (!returnDateInput.value) { document.getElementById('returnDate-error').classList.add('show'); returnDateInput.classList.add('error'); isValid = false; }
+            if (!pickupTimeInput.value) { document.getElementById('pickupTime-error').classList.add('show'); pickupTimeInput.classList.add('error'); isValid = false; }
+            if (!returnTimeInput.value) { document.getElementById('returnTime-error').classList.add('show'); returnTimeInput.classList.add('error'); isValid = false; }
+
+            if (pickupDateInput.value && returnDateInput.value) {
+                const pickup = new Date(pickupDateInput.value);
+                const returnDate = new Date(returnDateInput.value);
+                if (returnDate <= pickup) {
+                    document.getElementById('returnDate-error').textContent = 'Ngày trả phải sau ngày nhận ít nhất 1 ngày';
+                    document.getElementById('returnDate-error').classList.add('show');
+                    returnDateInput.classList.add('error');
+                    isValid = false;
+                }
+            }
+
+            submitBtn.disabled = !isValid;
+            return isValid;
+        }
+
+        function calculatePrice() {
+        if (!validateDates()) return;
+
+        const pickup = new Date(pickupDateInput.value + 'T' + pickupTimeInput.value);
+        const returnD = new Date(returnDateInput.value + 'T' + returnTimeInput.value);
+        const days = Math.ceil((returnD - pickup) / (1000 * 60 * 60 * 24));
+
+        if (days > 0) {
+            const base = days * dailyRate;
+            const fee = Math.round(base * 0.1);
+            const total = base + fee;
+            document.getElementById('days').textContent = days;
+            document.getElementById('base-price').textContent = formatCurrency(base);
+            document.getElementById('platform-fee').textContent = formatCurrency(fee);
+            document.getElementById('total-price').innerHTML = '<strong>' + formatCurrency(total) + '</strong>';
+        }
+    }
+
+        // Auto set min return date
+        pickupDateInput.addEventListener('change', function() {
+            const nextDay = new Date(pickupDateInput.value);
+            nextDay.setDate(nextDay.getDate() + 1);
+            returnDateInput.min = nextDay.toISOString().split('T')[0];
+            calculatePrice();
+        });
+
+        [returnDateInput, pickupTimeInput, returnTimeInput].forEach(el => el.addEventListener('change', calculatePrice));
+
+        // Init
+        validateDates();
+        calculatePrice();
+
+        // Prevent double submit
+        form.addEventListener('submit', function(e) {
+            if (!validateDates()) {
+                e.preventDefault();
+                alert('Vui lòng kiểm tra lại ngày tháng!');
+                return;
+            }
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+        });
+    });
+
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('vi-VN').format(amount) + ' VND';
+    }
+</script>
+</body>
+</html>

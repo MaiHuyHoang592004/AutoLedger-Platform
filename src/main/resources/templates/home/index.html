@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huy Hoàng Auto 88 - Thuê xe ô tô dễ dàng</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<header th:replace="~{fragments/header :: header}"></header>
+
+<section class="hero">
+    <div class="hero-background">
+        <!-- Ảnh nền được định nghĩa trong CSS -->
+        <div class="hero-overlay"></div>
+    </div>
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="hero-title">Đừng lãng phí thời gian ở đại lý</h1>
+            <p class="hero-subtitle">Thuê chiếc xe bạn muốn, ở bất cứ đâu bạn muốn</p>
+            <form class="search-form" th:action="@{/search}" method="get">
+                <div class="search-field">
+                    <label for="location">Địa điểm</label>
+                    <input type="text" id="location" name="location" placeholder="Thành phố, sân bay, địa chỉ hoặc khách sạn" required>
+                </div>
+                <div class="search-field">
+                    <label for="pickupDate">Ngày đi</label>
+                    <input type="date" id="pickupDate" name="pickupDate" required>
+                </div>
+                <div class="search-field">
+                    <label for="pickupTime">Giờ đi</label>
+                    <input type="time" id="pickupTime" name="pickupTime" required>
+                </div>
+                <div class="search-field">
+                    <label for="returnDate">Ngày về</label>
+                    <input type="date" id="returnDate" name="returnDate" required>
+                </div>
+                <div class="search-field">
+                    <label for="returnTime">Giờ về</label>
+                    <input type="time" id="returnTime" name="returnTime" required>
+                </div>
+                <button type="submit" class="search-btn"><i class="fas fa-search"></i> Tìm xe</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<section class="car-section">
+    <div class="container">
+        <h2 class="section-title">Xe phổ biến</h2>
+        <div class="nav-arrows">
+            <button class="nav-arrow prev" aria-label="Previous cars"><i class="fas fa-chevron-left"></i></button>
+            <button class="nav-arrow next" aria-label="Next cars"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="car-grid" th:if="${listings != null and !listings.isEmpty()}">
+            <div th:each="listing : ${listings}" class="car-card" th:attr="data-listing-id=${listing.id}">
+                <div class="car-image">
+                    <img th:src="${listing.imageUrls != null and not #lists.isEmpty(listing.imageUrls)} ? ${listing.imageUrls[0]} : '/images/default-car.jpg'"
+                         alt="Car Image" loading="lazy">
+                </div>
+                <div class="car-info">
+                    <h3 th:text="${listing.title}">Tiêu đề bài đăng</h3>
+                    <p th:text="${listing.make + ' ' + listing.model + (listing.year != null ? ' ' + listing.year : '')}">Xe: Make Model Year</p>
+                    <p th:text="${listing.homeCity}">Vị trí: Thành phố</p>
+                    <div class="rating">
+                        <span class="stars" th:if="${listing.rating != null and listing.rating > 0}">
+                            <span th:each="i : ${#numbers.sequence(1, 5)}">
+                                <i th:classappend="${i <= listing.rating} ? 'fas fa-star' : 'far fa-star'"></i>
+                            </span>
+                        </span>
+                        <span class="stars" th:unless="${listing.rating != null and listing.rating > 0}">
+                            <i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i>
+                        </span>
+                        <span class="reviews" th:if="${listing.numReviews != null and listing.numReviews > 0}" th:text="'(' + ${listing.numReviews} + ' đánh giá)'"></span>
+                        <span class="reviews" th:unless="${listing.numReviews != null and listing.numReviews > 0}">(Chưa có đánh giá)</span>
+                    </div>
+                    <div class="price">
+                        <span class="price-value"
+                              th:text="${listing.price24hCents != null ?
+                                        (#numbers.formatDecimal(listing.price24hCents * 3, 0, 'COMMA', 0, 'POINT') + '₫ / 3 ngày')
+                                        : 'Liên hệ'}">
+                            Price for 3 days
+                        </span>
+                    </div>
+                    <a class="book-btn" th:href="@{'/cars/' + ${listing.id}}">Đặt xe</a>
+                </div>
+            </div>
+        </div>
+        <div th:if="${listings == null or listings.isEmpty()}" class="no-cars">
+            <p>Không có bài đăng nào khả dụng. Hãy thử tìm kiếm.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Các phần khác như Why Choose Us, Become a Host, Testimonials có thể thêm vào đây -->
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script th:src="@{/js/script.js}"></script>
+</body>
+</html>

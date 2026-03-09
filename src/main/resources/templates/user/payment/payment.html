@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Thanh toán đặt xe</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: #f7f8fc;
+            margin: 0;
+            padding: 0;
+        }
+
+        .payment-container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .section {
+            margin-bottom: 30px; /* Increased margin for better separation */
+        }
+
+        .section h3 {
+            color: #34495e;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 8px; /* Slightly more padding */
+            margin-bottom: 15px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* Vertically align content */
+            margin: 15px 0; /* Increased margin */
+            font-size: 16px;
+        }
+
+        /* Styling for the Total Amount row */
+        .info-row.total {
+            font-size: 1.15em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px dashed #ccc;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+        }
+
+        input[type="text"], select {
+            padding: 12px; /* Slightly larger padding */
+            width: 100%;
+            border-radius: 8px; /* Slightly rounder corners */
+            border: 1px solid #ccc;
+            box-sizing: border-box; /* Include padding/border in element's total width */
+        }
+
+        input[type="text"][readonly] {
+            background-color: #ecf0f1; /* Light gray background for readonly */
+            font-weight: bold;
+            text-align: right;
+            color: #27ae60; /* Green text for emphasis on amount */
+            border-color: #2ecc71;
+        }
+
+        .btn-pay {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 14px 24px; /* Slightly larger button */
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px; /* Larger font */
+            width: 100%;
+            transition: background 0.3s, box-shadow 0.3s;
+            margin-top: 25px;
+        }
+
+        .btn-pay:hover {
+            background-color: #43a047;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+
+<div class="payment-container">
+    <h2>Xác nhận thanh toán đặt xe</h2>
+
+    <div class="section">
+        <h3>Thông tin đơn hàng</h3>
+        <div class="info-row">
+            <span><b>Mã đơn hàng:</b></span>
+            <span th:text="${booking.id}">B001</span>
+        </div>
+        <div class="info-row">
+            <span><b>Tên xe:</b></span>
+            <span th:text="${booking.listing != null ? booking.listing.title : 'Chưa có thông tin xe'}">Tên xe mẫu</span>
+        </div>
+        <div class="info-row">
+            <span><b>Ngày nhận xe:</b></span>
+            <span th:text="${#temporals.format(booking.startAt, 'dd/MM/yyyy HH:mm')}">26/10/2025 14:00</span>
+        </div>
+        <div class="info-row">
+            <span><b>Ngày trả xe:</b></span>
+            <span th:text="${#temporals.format(booking.endAt, 'dd/MM/yyyy HH:mm')}">28/10/2025 14:00</span>
+        </div>
+
+        <div class="info-row total">
+            <span><b>Tổng tiền cần thanh toán:</b></span>
+            <span th:text="${#numbers.formatDecimal(booking.totalAmountVND, 0, 'DEFAULT', 0, 'POINT')} + ' VND'">2,000,000 VND</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Phương thức thanh toán</h3>
+
+        <form th:action="@{/payment/initiate}" method="post">
+
+            <input type="hidden" name="bookingId" th:value="${booking.id}"/>
+            <input type="hidden" name="amountCents" th:value="${booking.getTotalAmountVND()}" />
+
+            <div class="form-group">
+                <label for="paymentMethod">Chọn phương thức:</label>
+                <select id="paymentMethod" name="paymentMethod" required>
+                    <option value="sandbox">Thanh toán Online (Thẻ/Chuyển khoản)</option>
+                    <option value="cod">Thanh toán khi nhận xe (COD) - Trả tiền mặt</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="amountDisplay">Số tiền thanh toán:</label>
+                <input
+                        type="text"
+                        id="amountDisplay"
+                        name="amountDisplay"
+                        readonly
+                        th:value="${#numbers.formatDecimal(booking.totalAmountVND, 0, 'DEFAULT', 0, 'POINT')} + ' VND'"
+                />
+            </div>
+
+            <button type="submit" class="btn-pay">Thanh toán ngay</button>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

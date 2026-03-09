@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh toán phí giữ chỗ - Car Rental Online</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #F4FFF9;
+            color: #1A2B3C;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 70px;
+            padding: 0 16px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: #28C07B;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .nav-link {
+            color: #5A6A79;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 24px;
+            transition: all 0.2s;
+        }
+
+        .nav-link.active {
+            background: #28C07B;
+            color: white;
+        }
+
+        .nav-link:hover {
+            background: #E7EFF4;
+            color: #1A2B3C;
+        }
+
+        .action-links {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .action-link {
+            color: #5A6A79;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 24px;
+            transition: all 0.2s;
+        }
+
+        .action-link:hover {
+            background: #E7EFF4;
+        }
+
+        .account-btn {
+            background: #28C07B;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 24px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* Progress Tracker */
+        .progress-tracker {
+            background: #F4FFF9;
+            padding: 24px 0;
+            margin-bottom: 32px;
+        }
+
+        .progress-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 80px;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .step-circle.completed {
+            background: #28C07B;
+            color: white;
+        }
+
+        .step-circle.active {
+            background: #28C07B;
+            color: white;
+            box-shadow: 0 0 0 4px rgba(40, 192, 123, 0.2);
+        }
+
+        .step-circle.pending {
+            background: white;
+            color: #5A6A79;
+            border: 2px solid #E7EFF4;
+        }
+
+        .step-label {
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .step-label.active {
+            color: #28C07B;
+            font-weight: 600;
+        }
+
+        .step-label.completed {
+            color: #28C07B;
+        }
+
+        .step-label.pending {
+            color: #5A6A79;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 2px;
+            background: #E7EFF4;
+            position: relative;
+        }
+
+        .progress-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: #28C07B;
+            width: 75%; /* 3 out of 4 steps completed */
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 32px;
+            margin-bottom: 64px;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .card-section {
+            padding: 32px;
+        }
+
+        .card-section:not(:last-child) {
+            border-bottom: 1px solid #E7EFF4;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #1A2B3C;
+        }
+
+        /* Payment Section */
+        .payment-total {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .total-amount {
+            font-size: 32px;
+            font-weight: 700;
+            color: #28C07B;
+            margin-bottom: 8px;
+        }
+
+        .total-label {
+            color: #5A6A79;
+            font-size: 14px;
+        }
+
+        /* Payment Method Selection */
+        .payment-option {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border: 2px solid #e7eff4;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .payment-option:hover {
+            border-color: #28C07B;
+            background: #f8fff8;
+        }
+
+        .payment-option.selected {
+            border-color: #28C07B;
+            background: #f8fff8;
+        }
+
+        .method-radio {
+            margin-right: 16px;
+        }
+
+        .method-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .method-icon {
+            width: 48px;
+            height: 48px;
+            background: #f7f9fc;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #28C07B;
+        }
+
+        .method-details {
+            flex: 1;
+        }
+
+        .balance-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .balance-amount {
+            font-size: 16px;
+            font-weight: 600;
+            color: #28C07B;
+        }
+
+        .balance-label {
+            font-size: 14px;
+            color: #5A6A79;
+        }
+
+        .method-desc {
+            font-size: 14px;
+            color: #5A6A79;
+        }
+
+        /* Insufficient Balance Warning */
+        .insufficient-balance {
+            background: #FFF5F5;
+            border: 1px solid #FEB2B2;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .warning-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .warning-content i {
+            color: #C53030;
+            font-size: 20px;
+            margin-top: 2px;
+        }
+
+        .warning-text strong {
+            color: #C53030;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .warning-text p {
+            color: #C53030;
+            font-size: 14px;
+            margin: 8px 0;
+        }
+
+        .topup-link {
+            color: #28C07B;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .topup-link:hover {
+            background-color: #E7EFF4;
+        }
+
+        .sufficient-balance {
+            background: #F0FFF4;
+            border: 1px solid #9AE6B4;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .success-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .success-content i {
+            color: #38A169;
+            font-size: 20px;
+            margin-top: 2px;
+        }
+
+        .success-text strong {
+            color: #38A169;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .success-text p {
+            color: #38A169;
+            font-size: 14px;
+            margin: 8px 0;
+        }
+
+        .wallet-balance-card {
+            background: #F7FAFC;
+            border: 1px solid #E7EFF4;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .wallet-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .wallet-icon {
+            width: 48px;
+            height: 48px;
+            background: #28C07B;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .wallet-info {
+            flex: 1;
+        }
+
+        .wallet-title {
+            font-weight: 600;
+            color: #1A2B3C;
+            margin-bottom: 4px;
+        }
+
+        .wallet-balance-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .balance-amount {
+            font-size: 18px;
+            font-weight: 600;
+            color: #28C07B;
+        }
+
+        .balance-label {
+            font-size: 14px;
+            color: #5A6A79;
+        }
+
+        /* Payment Actions */
+        .payment-actions {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .payment-actions .btn {
+            padding: 12px 32px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: #28C07B;
+            color: white;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #218a5f;
+        }
+
+        .btn-primary:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .countdown-timer {
+            background: #FFF5F5;
+            border: 1px solid #FEB2B2;
+            border-radius: 16px;
+            padding: 12px 16px;
+            text-align: center;
+            margin-bottom: 24px;
+            animation: pulse 2s infinite;
+        }
+
+        .timer-text {
+            color: #C53030;
+            font-weight: 600;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .booking-ref {
+            background: #F7FAFC;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .ref-label {
+            font-size: 12px;
+            color: #5A6A79;
+            margin-bottom: 4px;
+        }
+
+        .ref-value {
+            font-weight: 600;
+            color: #1A2B3C;
+        }
+
+        .guest-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .info-label {
+            color: #5A6A79;
+        }
+
+        .info-value {
+            font-weight: 500;
+        }
+
+        /* QR Payment Section */
+        .qr-container {
+            border: 2px solid #E7EFF4;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .qr-code {
+            width: 200px;
+            height: 200px;
+            background: #F7FAFC;
+            border-radius: 12px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: #5A6A79;
+        }
+
+        .qr-amount {
+            font-size: 18px;
+            font-weight: 600;
+            color: #28C07B;
+            margin-bottom: 8px;
+        }
+
+        .qr-ref {
+            font-size: 14px;
+            color: #5A6A79;
+            margin-bottom: 16px;
+        }
+
+        .qr-instruction {
+            font-size: 14px;
+            color: #5A6A79;
+            line-height: 1.5;
+        }
+
+        /* Bank Transfer Section */
+        .bank-section {
+            margin-top: 24px;
+        }
+
+        .bank-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1A2B3C;
+        }
+
+        .bank-info {
+            background: #F7FAFC;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .bank-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .bank-logo {
+            width: 40px;
+            height: 40px;
+            background: #28C07B;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .bank-details {
+            flex: 1;
+        }
+
+        .bank-name {
+            font-weight: 600;
+            color: #1A2B3C;
+        }
+
+        .bank-branch {
+            font-size: 12px;
+            color: #5A6A79;
+        }
+
+        .account-info {
+            margin-bottom: 12px;
+        }
+
+        .account-label {
+            font-size: 12px;
+            color: #5A6A79;
+            margin-bottom: 4px;
+        }
+
+        .account-value {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #1A2B3C;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #E7EFF4;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: #28C07B;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #E7EFF4;
+        }
+
+        /* Booking Info Section */
+        .booking-card {
+            margin-bottom: 24px;
+        }
+
+        .booking-header {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .vehicle-image {
+            width: 80px;
+            height: 60px;
+            background: #F7FAFC;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #5A6A79;
+        }
+
+        .booking-meta {
+            flex: 1;
+        }
+
+        .booking-title {
+            font-weight: 600;
+            color: #1A2B3C;
+            margin-bottom: 4px;
+        }
+
+        .booking-subtitle {
+            font-size: 14px;
+            color: #5A6A79;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .meta-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .meta-label {
+            color: #5A6A79;
+            font-size: 14px;
+        }
+
+        .meta-value {
+            font-weight: 500;
+            color: #1A2B3C;
+            font-size: 14px;
+        }
+
+        /* Payment Breakdown */
+        .payment-breakdown {
+            margin-bottom: 24px;
+        }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #E7EFF4;
+        }
+
+        .breakdown-item:last-child {
+            border-bottom: none;
+            font-weight: 600;
+            color: #28C07B;
+            font-size: 18px;
+        }
+
+        .breakdown-label {
+            color: #5A6A79;
+        }
+
+        .breakdown-value {
+            font-weight: 500;
+        }
+
+        /* Payment Steps */
+        .payment-steps {
+            counter-reset: step-counter;
+        }
+
+        .step-item {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            counter-increment: step-counter;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: #28C07B;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1A2B3C;
+            margin-bottom: 4px;
+        }
+
+        .step-content p {
+            font-size: 14px;
+            color: #5A6A79;
+            line-height: 1.5;
+        }
+
+        /* Footer */
+        .footer {
+            background: white;
+            border-top: 1px solid #E7EFF4;
+            padding: 24px 0;
+            text-align: center;
+            color: #5A6A79;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                height: auto;
+                padding: 16px;
+                gap: 16px;
+            }
+
+            .nav-links {
+                order: 2;
+                justify-content: center;
+            }
+
+            .action-links {
+                order: 1;
+            }
+
+            .progress-container {
+                flex-wrap: wrap;
+                gap: 16px;
+            }
+
+            .progress-step {
+                min-width: 60px;
+            }
+
+            .step-label {
+                font-size: 11px;
+            }
+
+            .card-section {
+                padding: 24px;
+            }
+
+            .total-amount {
+                font-size: 28px;
+            }
+
+            .qr-code {
+                width: 150px;
+                height: 150px;
+            }
+
+            .booking-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .meta-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header th:replace="~{fragments/header :: header}"></header>
+
+    <!-- Progress Tracker -->
+    <section class="progress-tracker">
+        <div class="container">
+            <div class="progress-container">
+                <div class="progress-step">
+                    <div class="step-circle completed">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="step-label completed">Tìm và chọn xe</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle completed">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="step-label completed">Xác nhận đơn hàng</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle active">3</div>
+                    <div class="step-label active">Thanh toán giữ chỗ</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle pending">4</div>
+                    <div class="step-label pending">Tạo đặt xe</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="main-content">
+            <!-- Left Column -->
+            <div class="left-column">
+                <!-- Payment Section -->
+                <div class="content-card">
+                    <div class="card-section">
+                        <h2 class="section-title">Thanh toán phí giữ chỗ</h2>
+
+                        <div class="payment-total">
+                            <div class="total-amount" th:text="${totalAmount ?: '500.000₫'}">500.000₫</div>
+                            <div class="total-label">Tổng thanh toán (bao gồm phí nền tảng)</div>
+                        </div>
+
+                        <div class="countdown-timer">
+                            <div class="timer-text">Thời gian giữ chỗ: 15:00</div>
+                        </div>
+
+                        <form id="payment-form" th:action="'/bookings/payment/' + ${holdToken}" method="post">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <input type="hidden" name="listingId" th:value="${listingId}">
+                            <input type="hidden" name="pickupDate" th:value="${pickupDate}">
+                            <input type="hidden" name="returnDate" th:value="${returnDate}">
+                            <input type="hidden" name="pickupTime" th:value="${pickupTime ?: '09:00'}">
+                            <input type="hidden" name="returnTime" th:value="${returnTime ?: '18:00'}">
+                            <input type="hidden" name="paymentMethod" value="wallet">
+                        </form>
+
+                        <div class="booking-ref">
+                            <div class="ref-label">Mã đặt xe</div>
+                            <div class="ref-value" th:text="${bookingRef ?: 'BB2024001'}">BB2024001</div>
+                        </div>
+
+                        <div class="guest-info">
+                            <span class="info-label">Khách hàng:</span>
+                            <span class="info-value" sec:authentication="name"></span>
+                        </div>
+
+                        <div class="guest-info">
+                            <span class="info-label">Số điện thoại:</span>
+                            <span class="info-value">--</span>
+                        </div>
+
+                        <div class="guest-info">
+                            <span class="info-label">Xe đã chọn:</span>
+                            <span class="info-value" th:text="${vehicleName ?: 'Đang tải...'}">Đang tải...</span>
+                        </div>
+
+                        <!-- Debug information -->
+                        <div th:if="${debugInfo}" style="margin-top: 20px; padding: 15px; background: #ffe6e6; border: 1px solid #ff9999; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-line;">
+                            <strong style="color: #cc0000;">🔍 Debug Information:</strong><br>
+                            <span th:text="${debugInfo}"></span>
+                        </div>
+
+                        <div th:if="${debug}" style="margin-top: 20px; padding: 15px; background: #ffe6e6; border: 1px solid #ff9999; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-line;">
+                            <strong style="color: #cc0000;">⚠️ Exception Details:</strong><br>
+                            <span th:text="${debug}"></span>
+                        </div>
+                    </div>
+
+                    <!-- Wallet Payment Section -->
+                    <div class="card-section">
+                        <h3 class="section-title">Thanh toán từ ví</h3>
+
+                        <!-- Wallet Balance Display -->
+                        <div class="wallet-balance-card">
+                            <div class="wallet-header">
+                                <div class="wallet-icon">
+                                    <i class="fas fa-wallet"></i>
+                                </div>
+                                <div class="wallet-info">
+                                    <div class="wallet-title">Ví Car Rental Online</div>
+                                    <div class="wallet-balance-display">
+                                        <span class="balance-amount" id="wallet-balance">--</span>
+                                        <span class="balance-label">số dư khả dụng</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Insufficient Balance Warning -->
+                            <div class="insufficient-balance" id="insufficient-warning" style="display: none;">
+                                <div class="warning-content">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <div class="warning-text">
+                                        <strong>Số dư không đủ!</strong>
+                                        <p>Bạn cần nạp thêm tiền vào ví để thanh toán phí giữ chỗ.</p>
+                                        <a href="#" class="topup-link" onclick="showTopupModal()">
+                                            <i class="fas fa-plus"></i> Nạp tiền ngay
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sufficient Balance Success -->
+                            <div class="sufficient-balance" id="sufficient-notice" style="display: none;">
+                                <div class="success-content">
+                                    <i class="fas fa-check-circle"></i>
+                                    <div class="success-text">
+                                        <strong>Sẵn sàng thanh toán!</strong>
+                                        <p>Số dư ví đủ để thanh toán phí giữ chỗ.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Actions -->
+                        <div class="payment-actions">
+                            <button type="submit" form="payment-form" class="btn-primary" id="pay-button">
+                                <i class="fas fa-credit-card"></i> Thanh toán giữ chỗ
+                            </button>
+                        </div>
+                    </div>
+                    <!-- QR Payment Section -->
+                    <div class="card-section bank-payment-section" style="display: none;">
+                        <h3 class="section-title">Thanh toán bằng mã QR</h3>
+
+                        <div class="qr-container">
+                            <div class="qr-code">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <div class="qr-amount" th:text="${totalAmount ?: '500.000₫'}">500.000₫</div>
+                            <div class="qr-ref" th:text="'Mã tham chiếu: ' + ${bookingRef ?: 'BB2024001'}">Mã tham chiếu: BB2024001</div>
+                            <div class="qr-instruction">
+                                Quét mã QR bằng ứng dụng ngân hàng để thanh toán
+                            </div>
+                        </div>
+
+                        <div class="bank-section">
+                            <h4 class="bank-title">Chuyển khoản qua ngân hàng</h4>
+                            <div class="bank-info">
+                                <div class="bank-header">
+                                    <div class="bank-logo">VCB</div>
+                                    <div class="bank-details">
+                                        <div class="bank-name">Ngân hàng TMCP Ngoại thương Việt Nam</div>
+                                        <div class="bank-branch">Chi nhánh Hà Nội</div>
+                                    </div>
+                                </div>
+
+                                <div class="account-info">
+                                    <div class="account-label">Tên tài khoản</div>
+                                    <div class="account-value">
+                                        BONBONCAR TECHNOLOGY JSC
+                                        <button class="copy-btn" onclick="copyToClipboard('BONBONCAR TECHNOLOGY JSC')">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="account-info">
+                                    <div class="account-label">Số tài khoản</div>
+                                    <div class="account-value">
+                                        1234567890
+                                        <button class="copy-btn" onclick="copyToClipboard('1234567890')">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Steps -->
+                <div class="content-card">
+                    <div class="card-section">
+                        <h3 class="section-title">Các bước thanh toán</h3>
+                        <div class="payment-steps">
+                            <div class="step-item">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h4>Giữ chỗ xe</h4>
+                                    <p>Đặt chỗ xe trong vòng 15 phút với phí giữ chỗ</p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h4>Thanh toán giữ chỗ</h4>
+                                    <p>Quét QR hoặc chuyển khoản để thanh toán phí giữ chỗ</p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h4>Chờ xác nhận</h4>
+                                    <p>Chủ xe sẽ xác nhận đơn đặt trong vòng 24h</p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <h4>Nhận xe</h4>
+                                    <p>Đến địa điểm nhận xe theo lịch hẹn</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="right-column">
+                <!-- Booking Info -->
+                <div class="content-card booking-card">
+                    <div class="card-section">
+                        <h3 class="section-title">Thông tin đơn thuê</h3>
+
+                        <div class="booking-header">
+                            <div class="vehicle-image">
+                                <i class="fas fa-car"></i>
+                            </div>
+                            <div class="booking-meta">
+                                <div class="booking-title" th:text="${vehicleName ?: 'Toyota Camry 2020'}">Toyota Camry 2020</div>
+                                <div class="booking-subtitle" th:text="${'Mã đặt xe: ' + ${bookingRef ?: 'BB2024001'}}">Mã đặt xe: BB2024001</div>
+                            </div>
+                        </div>
+
+                        <div class="meta-grid">
+                            <div class="meta-item">
+                                <span class="meta-label">Ngày nhận xe</span>
+                                <span class="meta-value" th:text="${pickupDate ?: '15/11/2024'}">15/11/2024</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Ngày trả xe</span>
+                                <span class="meta-value" th:text="${returnDate ?: '18/11/2024'}">18/11/2024</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Địa điểm</span>
+                                <span class="meta-value" th:text="${location ?: 'Hà Nội'}">Hà Nội</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Thời lượng</span>
+                                <span class="meta-value" th:text="${duration ?: '3 ngày'}">3 ngày</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Breakdown -->
+                <div class="content-card payment-breakdown">
+                    <div class="card-section">
+                        <h3 class="section-title">Thanh toán</h3>
+
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">Giá thuê xe cơ bản</span>
+                            <span class="breakdown-value" th:text="${basePrice ?: '1.200.000₫'}">1.200.000₫</span>
+                        </div>
+
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">Phí nền tảng (10%)</span>
+                            <span class="breakdown-value" th:text="${platformFee ?: '120.000₫'}">120.000₫</span>
+                        </div>
+
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">Tổng cộng (giá thuê + phí nền tảng)</span>
+                            <span class="breakdown-value" th:text="${totalAmount ?: '1.320.000₫'}">1.320.000₫</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Steps Summary -->
+                <div class="content-card">
+                    <div class="card-section">
+                        <h3 class="section-title">Các bước thanh toán</h3>
+                        <div class="payment-steps">
+                            <div class="step-item">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h4>Giữ chỗ</h4>
+                                    <p>Đặt chỗ tạm thời trong 15 phút</p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h4>Thanh toán</h4>
+                                    <p>Thanh toán phí giữ chỗ</p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h4>Xác nhận</h4>
+                                    <p>Chủ xe xác nhận đơn đặt</p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <h4>Giao xe</h4>
+                                    <p>Nhận xe tại địa điểm hẹn</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer th:replace="~{fragments/footer :: footer}"></footer>
+
+    <script>
+        // Global variables
+        let timeLeft = 0;
+        let timerInterval;
+        let holdToken = null;
+        let bookingId = null;
+        let totalAmount = 0;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get parameters from URL or template
+            const urlParams = new URLSearchParams(window.location.search);
+            holdToken = urlParams.get('holdToken') || [[${holdToken ?: ''}]];
+            bookingId = urlParams.get('bookingId') || [[${bookingId ?: ''}]];
+            totalAmount = parseInt([[${totalAmount ?: 0}]].toString().replace(/[^\d]/g, ''));
+
+            // Check for success message from flash attributes
+            const successMessage = [[${success ?: ''}]];
+            if (successMessage) {
+                showToast(successMessage, 'success');
+                // Redirect to booking details after showing success message
+                setTimeout(() => {
+                    window.location.href = '/bookings/' + bookingId + '?success=true';
+                }, 2000);
+            }
+
+            // Initialize components
+            initPaymentMethods();
+            loadWalletBalance();
+            initCountdownTimer();
+        });
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                const btn = event.target.closest('.copy-btn');
+                const originalIcon = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                btn.style.color = '#28C07B';
+                setTimeout(() => {
+                    btn.innerHTML = originalIcon;
+                    btn.style.color = '#28C07B';
+                }, 2000);
+            });
+        }
+
+        // Payment method selection
+        function initPaymentMethods() {
+            const paymentOptions = document.querySelectorAll('.payment-option');
+
+            paymentOptions.forEach(option => {
+                const radio = option.querySelector('input[type="radio"]');
+
+                // Initial state
+                if (radio.checked) {
+                    option.classList.add('selected');
+                    togglePaymentUI(radio.value);
+                }
+
+                // Click handler
+                option.addEventListener('click', () => {
+                    paymentOptions.forEach(opt => opt.classList.remove('selected'));
+                    option.classList.add('selected');
+                    radio.checked = true;
+                    togglePaymentUI(radio.value);
+
+                    if (radio.value === 'wallet') {
+                        validateWalletBalance();
+                    }
+                });
+            });
+        }
+
+        function togglePaymentUI(method) {
+            const bankSection = document.querySelector('.bank-payment-section');
+            if (method === 'wallet') {
+                bankSection.style.display = 'none';
+            } else {
+                bankSection.style.display = 'block';
+            }
+        }
+
+        // Load wallet balance
+        async function loadWalletBalance() {
+            try {
+                const response = await fetch('/api/bookings/api/wallet/balance');
+                const data = await response.json();
+
+                const balanceElement = document.getElementById('wallet-balance');
+                balanceElement.textContent = data.balanceFormatted;
+                balanceElement.style.color = '#28C07B'; // Always green for demo
+
+                // Store for validation
+                window.userWalletBalance = data.balanceCents;
+
+                // Always show sufficient balance for demo
+                showSufficientBalance();
+            } catch (error) {
+                console.error('Failed to load wallet balance:', error);
+                // For demo, assume sufficient balance
+                const balanceElement = document.getElementById('wallet-balance');
+                balanceElement.textContent = '1.000.000₫';
+                balanceElement.style.color = '#28C07B';
+                showSufficientBalance();
+            }
+        }
+
+        // Always show sufficient balance for demo
+        function showSufficientBalance() {
+            const warning = document.getElementById('insufficient-warning');
+            const notice = document.getElementById('sufficient-notice');
+            const payButton = document.getElementById('pay-button');
+
+            warning.style.display = 'none';
+            notice.style.display = 'block';
+            payButton.disabled = false;
+            payButton.innerHTML = '<i class="fas fa-credit-card"></i> Thanh toán giữ chỗ';
+        }
+
+        // Countdown timer with API integration
+        async function initCountdownTimer() {
+            if (!holdToken) {
+                console.warn('No hold token available for countdown');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/bookings/api/hold/${holdToken}/status`);
+                const data = await response.json();
+
+                if (data.timeLeftSeconds && data.timeLeftSeconds > 0) {
+                    timeLeft = data.timeLeftSeconds;
+                    updateTimer();
+
+                    // Start sync interval
+                    timerInterval = setInterval(async () => {
+                        try {
+                            const syncResponse = await fetch(`/api/bookings/api/hold/${holdToken}/remaining`);
+                            const syncData = await syncResponse.json();
+
+                            if (syncData.timeLeftSeconds !== undefined) {
+                                timeLeft = syncData.timeLeftSeconds;
+                            }
+                        } catch (syncError) {
+                            console.error('Sync error:', syncError);
+                        }
+                    }, 30000); // Sync every 30 seconds
+                } else {
+                    showExpiredState();
+                }
+            } catch (error) {
+                console.error('Failed to load hold status:', error);
+                // Fallback to basic timer
+                timeLeft = 15 * 60; // 15 minutes
+                updateTimer();
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    updateTimer();
+                }, 1000);
+            }
+        }
+
+        function updateTimer() {
+            const timerElement = document.querySelector('.timer-text');
+
+            if (timeLeft <= 0) {
+                timerElement.textContent = 'Hết thời gian giữ chỗ';
+                timerElement.style.color = '#C53030';
+                clearInterval(timerInterval);
+                showExpiredState();
+                return;
+            }
+
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerElement.textContent = `Thời gian còn lại: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // Color coding
+            if (timeLeft <= 60) { // Last minute
+                timerElement.style.color = '#C53030';
+            } else if (timeLeft <= 300) { // Last 5 minutes
+                timerElement.style.color = '#D69E2E';
+            } else {
+                timerElement.style.color = '#C53030'; // Normal red
+            }
+        }
+
+        function showExpiredState() {
+            // Disable payment options
+            const paymentOptions = document.querySelectorAll('.payment-option');
+            paymentOptions.forEach(option => {
+                option.style.opacity = '0.5';
+                option.style.pointerEvents = 'none';
+            });
+
+            // Show expired message
+            const expiredMsg = document.createElement('div');
+            expiredMsg.className = 'alert alert-danger';
+            expiredMsg.innerHTML = `
+                <h4><i class="fas fa-exclamation-triangle"></i> Đã hết thời gian giữ chỗ</h4>
+                <p>Xe đã được trả về cho hệ thống. Vui lòng tạo lại booking.</p>
+                <a href="/search" class="btn btn-secondary">Tìm xe khác</a>
+            `;
+
+            const paymentSection = document.querySelector('.card-section');
+            paymentSection.appendChild(expiredMsg);
+        }
+
+        // Progress tracker fix
+        document.querySelectorAll('.progress-step')[1].querySelector('.step-circle').className = 'step-circle completed';
+        document.querySelectorAll('.progress-step')[1].querySelector('.step-label').className = 'step-label completed';
+
+        // Show topup modal (placeholder)
+        function showTopupModal() {
+            alert('Tính năng nạp tiền sẽ được thêm sau. Vui lòng liên hệ hỗ trợ.');
+        }
+
+        // Enhanced toast function
+        function showToast(message, type = 'success') {
+            // Remove existing toast
+            const existingToast = document.querySelector('.toast-notification');
+            if (existingToast) existingToast.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.innerHTML = `
+                <div class="toast ${type}" role="alert">
+                    <div class="toast-header">
+                        <strong class="me-auto">${type === 'success' ? 'Thành công' : 'Lỗi'}</strong>
+                        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+                    </div>
+                    <div class="toast-body">${message}</div>
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast.querySelector('.toast'));
+            bsToast.show();
+
+            setTimeout(() => toast.remove(), 5000);
+        }
+    </script>
+</body>
+</html>

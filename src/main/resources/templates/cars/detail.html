@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${listing.title}">Chi tiết xe</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        .car-detail-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 0 60px 0;
+            position: relative;
+        }
+
+        .hero-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: start;
+            justify-items: center;
+        }
+
+        .hero-image-gallery {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .main-image-container {
+            position: relative;
+        }
+
+        .main-image-container img {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            transition: opacity 0.3s ease;
+        }
+
+        .thumbnail-gallery {
+            margin-top: 12px;
+        }
+
+        .thumbnail-container {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .thumbnail-container img {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .thumbnail-container img:hover {
+            border-color: rgba(255,255,255,0.5);
+            transform: scale(1.05);
+        }
+
+        .thumbnail-container img.active {
+            border-color: #667eea;
+            box-shadow: 0 0 8px rgba(102, 126, 234, 0.5);
+        }
+
+        .hero-info {
+            padding: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .car-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .car-tags {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .car-tag {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .car-location {
+            font-size: 16px;
+            margin-bottom: 16px;
+            opacity: 0.9;
+        }
+
+        .car-rating {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .stars {
+            color: #ffd700;
+        }
+
+        .rating-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .car-price {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .price-unit {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        .car-limits {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .hero-host-info {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .hero-host-info h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .hero-host-info .host-email {
+            margin: 0 0 12px 0;
+            color: #e8f4ff;
+            font-size: 15px;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .hero-host-info .host-description {
+            margin: 0;
+            font-size: 15px;
+            line-height: 1.5;
+            color: #f0f8ff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            opacity: 0.95;
+        }
+
+        .hero-reviews {
+            background: rgba(255,255,255,0.1);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .hero-reviews h4 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .hero-review-item {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .hero-review-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .hero-review-item .review-header {
+            margin-bottom: 6px;
+        }
+
+        .hero-review-item .review-comment {
+            margin: 0;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .policies-section {
+            padding: 60px 0;
+            background: #f8f9fa;
+        }
+
+        .policies-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .policies-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 40px;
+            color: #1e293b;
+        }
+
+        .policy-group {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .policy-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1e293b;
+        }
+
+        .policy-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .policy-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+            color: #64748b;
+        }
+
+        .policy-list li:last-child {
+            border-bottom: none;
+        }
+
+        .host-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .host-details h4 {
+            margin: 0 0 4px 0;
+            color: #1e293b;
+            font-size: 18px;
+        }
+
+        .host-email {
+            margin: 0 0 8px 0;
+            color: #667eea;
+            font-size: 14px;
+        }
+
+        .host-description {
+            color: #64748b;
+            font-size: 14px;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .review-item {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 16px 0;
+        }
+
+        .review-item:last-child {
+            border-bottom: none;
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .review-rating {
+            color: #ffd700;
+        }
+
+        .review-comment {
+            color: #374151;
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
+        .review-date {
+            color: #9ca3af;
+            font-size: 12px;
+        }
+
+        .no-reviews {
+            text-align: center;
+            color: #9ca3af;
+            padding: 20px;
+            font-style: italic;
+        }
+
+        .terms-checkbox {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 20px;
+            background: #fff3cd;
+            border-radius: 8px;
+            margin: 30px 0;
+            border: 1px solid #ffeaa7;
+        }
+
+        .terms-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            cursor: pointer;
+        }
+
+        .terms-text {
+            font-size: 16px;
+            color: #856404;
+            font-weight: 500;
+            line-height: 1.4;
+            cursor: pointer;
+        }
+
+        .terms-text a {
+            color: #856404;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+
+        .terms-text a:hover {
+            color: #5a4100;
+        }
+
+        .booking-cta {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .booking-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .booking-btn:hover {
+            background: #218838;
+        }
+
+        .booking-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #1e293b;
+        }
+
+        .modal-close {
+            font-size: 24px;
+            cursor: pointer;
+            color: #64748b;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .modal-btn {
+            width: 100%;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .modal-btn:hover {
+            background: #5a67d8;
+        }
+
+        .modal-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .car-detail-hero {
+                padding: 60px 0 40px 0;
+            }
+
+            .hero-container {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .hero-image-gallery .carousel-inner img {
+                height: 280px !important;
+            }
+
+            .car-title {
+                font-size: 28px;
+            }
+
+            .hero-info {
+                padding: 0;
+                text-align: center;
+            }
+
+            .policies-section {
+                padding: 40px 0;
+            }
+
+            .policies-container {
+                padding: 0 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .car-title {
+                font-size: 24px;
+            }
+
+            .car-price {
+                font-size: 24px;
+            }
+
+            .hero-host-info,
+            .hero-reviews {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header th:replace="~{fragments/header :: header}"></header>
+
+    <!-- Hero Section -->
+    <section class="car-detail-hero">
+        <div class="container">
+            <div class="hero-container">
+                <!-- Car Image Gallery -->
+                <div class="hero-image-gallery">
+                    <div id="carImageCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            <div th:each="img, iter : ${listing.imageUrls}"
+                                 th:classappend="${iter.first} ? 'carousel-item active' : 'carousel-item'">
+                                <img th:src="${img}"
+                                     class="d-block w-100"
+                                     style="height: 400px; object-fit: cover; border-radius: 12px;"
+                                     alt="Car Image" loading="lazy">
+                            </div>
+                            <div th:if="${listing.imageUrls == null or #lists.isEmpty(listing.imageUrls)}"
+                                 class="carousel-item active bg-light d-flex align-items-center justify-content-center"
+                                 style="height: 400px; border-radius: 12px;">
+                                <i class="fas fa-car text-muted" style="font-size: 5rem;"></i>
+                            </div>
+                        </div>
+
+                        <!-- NÚT PREV/NEXT -->
+                        <button th:if="${listing.imageUrls != null and listing.imageUrls.size() > 1}"
+                                class="carousel-control-prev" type="button" data-bs-target="#carImageCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button th:if="${listing.imageUrls != null and listing.imageUrls.size() > 1}"
+                                class="carousel-control-next" type="button" data-bs-target="#carImageCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
+
+                        <!-- DOTS -->
+                        <div class="carousel-indicators" th:if="${listing.imageUrls != null and listing.imageUrls.size() > 1}">
+                            <button th:each="img, iter : ${listing.imageUrls}"
+                                    type="button"
+                                    data-bs-target="#carImageCarousel"
+                                    th:data-bs-slide-to="${iter.index}"
+                                    th:classappend="${iter.first} ? 'active' : ''"
+                                    th:aria-label="'Slide ' + ${iter.index + 1}"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Car Info -->
+                <div class="hero-info">
+                    <h1 class="car-title" th:text="${listing.title}">BMW 730i 2025</h1>
+
+                    <div class="car-tags">
+                        <span class="car-tag">Sang trọng</span>
+                        <span class="car-tag">Xe gia đình</span>
+                        <span class="car-tag">Tự lái</span>
+                    </div>
+
+                    <div class="car-location">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span th:text="${listing.homeCity}">Hà Nội · Quận Nam Từ Liêm</span>
+                    </div>
+
+                    <div class="car-rating">
+                        <div class="stars">
+                            <span th:each="i : ${#numbers.sequence(1, 5)}">
+                                <i th:classappend="${i <= (listing.rating != null ? listing.rating : 0)} ? 'fas fa-star' : 'far fa-star'"></i>
+                            </span>
+                        </div>
+                        <span class="rating-text" th:text="${listing.rating != null ? listing.rating + ' (' + listing.numReviews + ' đánh giá)' : 'Chưa có đánh giá'}">
+                            4.9 (23 đánh giá)
+                        </span>
+                    </div>
+
+                    <!-- Host Information in Header -->
+                    <div class="hero-host-info">
+                        <h3>Chủ xe: <span th:text="${listing.hostName}">Nguyễn Văn A</span></h3>
+                        <p class="host-email" th:text="${listing.hostEmail}">host@example.com</p>
+                        <p class="host-description" th:text="${listing.description}">Mô tả về xe từ chủ xe.</p>
+                    </div>
+
+                    <!-- Reviews in Header -->
+                    <div class="hero-reviews" th:if="${reviews != null and !reviews.isEmpty()}">
+                        <h4>Đánh giá gần đây:</h4>
+                        <div class="hero-review-item" th:each="review : ${reviews}" th:if="${reviewStat.index < 2}">
+                            <div class="review-header">
+                                <strong th:text="${review.reviewerName}">Nguyễn Văn B</strong>
+                                <div class="review-rating">
+                                    <span th:each="i : ${#numbers.sequence(1, 5)}">
+                                        <i th:classappend="${i <= review.rating} ? 'fas fa-star' : 'far fa-star'"></i>
+                                    </span>
+                                </div>
+                            </div>
+                            <p class="review-comment" th:text="${review.comment}">Xe rất tốt, chủ xe thân thiện!</p>
+                        </div>
+                    </div>
+
+                    <div class="car-price">
+                        <span th:text="${listing.price24hCents != null ? #numbers.formatDecimal(listing.price24hCents, 0, 'COMMA', 0, 'POINT') + '₫' : 'Liên hệ'}">
+                            9.000.000₫
+                        </span>
+                        <span class="price-unit"> / ngày</span>
+                    </div>
+
+                    <div class="car-limits">
+                        <span th:text="${'Giới hạn: ' + listing.kmLimit24h + 'km/ngày'}">Giới hạn: 300km/ngày</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Policies Section -->
+    <section id="rentalPolicySection" class="policies-section">
+        <div class="container">
+            <div class="policies-container">
+                <h2 class="policies-title">Điều khoản & chính sách thuê xe</h2>
+
+
+
+                <!-- Reviews Section -->
+                <div class="policy-group">
+                    <h3 class="policy-title">Đánh giá từ khách hàng</h3>
+                    <div id="reviews-container">
+                        <div class="review-item" th:each="review : ${reviews}" th:if="${reviews != null and !reviews.isEmpty()}">
+                            <div class="review-header">
+                                <strong th:text="${review.reviewerName}">Nguyễn Văn B</strong>
+                                <div class="review-rating">
+                                    <span th:each="i : ${#numbers.sequence(1, 5)}">
+                                        <i th:classappend="${i <= review.rating} ? 'fas fa-star' : 'far fa-star'"></i>
+                                    </span>
+                                </div>
+                            </div>
+                            <p class="review-comment" th:text="${review.comment}">Xe rất tốt, chủ xe thân thiện!</p>
+                            <small class="review-date" th:text="${#temporals.format(review.createdAt, 'dd/MM/yyyy')}">15/11/2025</small>
+                        </div>
+                        <div th:if="${reviews == null or reviews.isEmpty()}" class="no-reviews">
+                            <p>Chưa có đánh giá nào cho xe này.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="policy-group">
+                    <h3 class="policy-title">Chính sách hủy</h3>
+                    <ul class="policy-list">
+                        <li>Chủ xe hủy: Hoàn 100% tiền thuê cho khách.</li>
+                        <li>Khách hủy trước 8 giờ so với giờ nhận: Hoàn 90%.</li>
+                        <li>Khách hủy trong vòng 8 giờ trước giờ nhận: Không hoàn.</li>
+                    </ul>
+                </div>
+
+                <div class="policy-group">
+                    <h3 class="policy-title">Giới hạn km & phụ phí</h3>
+                    <ul class="policy-list">
+                        <li th:text="${'Giới hạn: ' + listing.kmLimit24h + ' km/ngày'}">Giới hạn: 300 km/ngày</li>
+                        <li>Vượt quá tính 5.000đ/km.</li>
+                    </ul>
+                </div>
+
+                <div class="policy-group">
+                    <h3 class="policy-title">Vệ sinh xe</h3>
+                    <ul class="policy-list">
+                        <li>Xe trả quá bẩn (lông thú, cát/bùn nhiều, mùi khó chịu...) sẽ bị thu phí vệ sinh 50.000đ.</li>
+                    </ul>
+                </div>
+
+                <div class="policy-group">
+                    <h3 class="policy-title">Phí nền tảng & thuế</h3>
+                    <ul class="policy-list">
+                        <li>Phí nền tảng và thuế (nếu có) sẽ hiển thị chi tiết ở bước thanh toán.</li>
+                    </ul>
+                </div>
+
+                <!-- Terms Agreement -->
+                <div class="terms-checkbox">
+                    <input type="checkbox" id="acceptTerms" onchange="toggleBookingButton()">
+                    <label for="acceptTerms" class="terms-text">
+                        Tôi đã đọc và đồng ý với <a href="#rentalPolicySection" onclick="scrollToPolicies(); return false;">điều khoản thuê xe</a>
+                    </label>
+                </div>
+
+                <!-- Booking CTA -->
+                <div class="booking-cta">
+                    <button id="openDateModal" class="booking-btn" disabled onclick="openBookingModal()">Chọn ngày thuê</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Chọn ngày thuê xe</h2>
+                <span class="modal-close" onclick="closeBookingModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="bookingForm">
+                    <input type="hidden" id="selectedCarId" th:value="${listing.id}">
+                    <div class="form-group">
+                        <label for="modalPickupDate">Ngày nhận xe:</label>
+                        <input type="date" id="modalPickupDate" name="pickupDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalPickupTime">Giờ nhận xe:</label>
+                        <input type="time" id="modalPickupTime" name="pickupTime" value="09:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalReturnDate">Ngày trả xe:</label>
+                        <input type="date" id="modalReturnDate" name="returnDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalReturnTime">Giờ trả xe:</label>
+                        <input type="time" id="modalReturnTime" name="returnTime" value="18:00" required>
+                    </div>
+                    <button type="button" onclick="proceedToBooking()" class="modal-btn">Tiếp tục đặt xe</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer th:replace="~{fragments/footer :: footer}"></footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script th:src="@{/js/script.js}"></script>
+    <script>
+        // Global functions - must be defined before HTML elements use them
+        function toggleBookingButton() {
+            const checkbox = document.getElementById('acceptTerms');
+            const bookingBtn = document.getElementById('openDateModal');
+            if (checkbox && bookingBtn) {
+                bookingBtn.disabled = !checkbox.checked;
+            }
+        }
+
+        function scrollToPolicies() {
+            const policySection = document.getElementById('rentalPolicySection');
+            if (policySection) {
+                policySection.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const bookingBtn = document.getElementById('openDateModal');
+            if (bookingBtn) {
+                bookingBtn.disabled = true; // ban đầu luôn disable
+            }
+
+            // Initialize map if coordinates are available
+            const latitude = [[${listing.latitude != null ? listing.latitude : 'null'}]];
+            const longitude = [[${listing.longitude != null ? listing.longitude : 'null'}]];
+
+            if (latitude !== 'null' && longitude !== 'null' && latitude && longitude) {
+                // Create map container dynamically
+                const mapSection = document.createElement('div');
+                mapSection.className = 'policy-group';
+                mapSection.innerHTML = `
+                    <h3 class="policy-title">Vị trí xe</h3>
+                    <div id="car-map" style="height: 300px; border-radius: 8px;"></div>
+                `;
+
+                // Insert map after reviews section
+                const reviewsSection = document.querySelector('.policy-group:has(h3:contains("Đánh giá"))') ||
+                                     document.querySelector('.policy-group:nth-child(4)');
+                if (reviewsSection) {
+                    reviewsSection.insertAdjacentElement('afterend', mapSection);
+                }
+
+                // Initialize Leaflet map
+                const map = L.map('car-map').setView([latitude, longitude], 15);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+
+                L.marker([latitude, longitude]).addTo(map)
+                    .bindPopup('Vị trí nhận xe')
+                    .openPopup();
+            }
+        });
+
+        // Open modal when button is clicked
+        document.getElementById('openDateModal').addEventListener('click', openBookingModal);
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('bookingModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: car_rental
+
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=car_rental;encrypt=false;trustServerCertificate=true;loginTimeout=30
+    username: sa
+    password: 123  # Thay bằng password thật
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: none  # Không tự tạo bảng → an toàn
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        format_sql: true
+        show_sql: true  # In SQL ra console
+
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    encoding: UTF-8
+    detect-encoding: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: thuanlthe161839@fpt.edu.vn
+    password: zpdqctiqfmehztpx
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: 8084
+  error:
+    include-stacktrace: always      # BẬT STACK TRACE TRONG LỖI 500
+    include-exception: true         # Hiện tên exception
+    include-binding-errors: always  # Hiện lỗi validation
+    include-message: always         # Hiện message chi tiết
+
+logging:
+  level:
+    root: INFO
+    com.group1.car_rental: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.type.descriptor.sql.BasicExtractor: TRACE
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

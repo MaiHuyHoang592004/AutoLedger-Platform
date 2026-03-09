@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý xe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Quản lý xe của bạn</h1>
+
+        <!-- Success/Error Messages -->
+        <div th:if="${success}" class="alert alert-success" role="alert">
+            <span th:text="${success}"></span>
+        </div>
+        <div th:if="${error}" class="alert alert-danger" role="alert">
+            <span th:text="${error}"></span>
+        </div>
+
+        <!-- Car List -->
+        <h2>Danh sách xe</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Hãng xe</th>
+                    <th>Model</th>
+                    <th>Năm</th>
+                    <th>Hộp số</th>
+                    <th>Nhiên liệu</th>
+                    <th>Số ghế</th>
+                    <th>Giá/ngày</th>
+                    <th>Thành phố</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="vehicle : ${vehicles}">
+                    <td th:text="${vehicle.make}"></td>
+                    <td th:text="${vehicle.model}"></td>
+                    <td th:text="${vehicle.year}"></td>
+                    <td th:text="${vehicle.transmission}"></td>
+                    <td th:text="${vehicle.fuelType}"></td>
+                    <td th:text="${vehicle.seats}"></td>
+                    <td th:text="${#numbers.formatDecimal(vehicle.dailyPrice, 0, 'COMMA', 2, 'POINT')} + ' $'"></td>
+                    <td th:text="${vehicle.city}"></td>
+                    <td>
+                        <a th:href="@{/cars/edit/{id}(id=${vehicle.id})}" class="btn btn-primary btn-sm">Sửa</a>
+                        <form th:action="@{/cars/delete/{id}(id=${vehicle.id})}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Bạn có chắc muốn xóa xe này?')">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${vehicles.empty}">
+                    <td colspan="9" class="text-center">Chưa có xe nào được đăng.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Car Form -->
+        <h2 th:text="${carForm.id != null} ? 'Sửa xe' : 'Thêm xe mới'"></h2>
+        <form th:action="${carForm.id != null} ? @{/cars/edit/{id}(id=${carForm.id})} : @{/cars/add}" th:object="${carForm}" method="post" class="needs-validation" novalidate>
+            <input type="hidden" th:field="*{id}"/>
+            <div class="mb-3">
+                <label for="make" class="form-label">Hãng xe</label>
+                <input type="text" class="form-control" id="make" th:field="*{make}" required>
+                <div class="invalid-feedback" th:errors="*{make}"></div>
+            </div>
+            <div class="mb-3">
+                <label for="model" class="form-label">Model</label>
+                <input type="text" class="form-control" id="model" th:field="*{model}" required>
+                <div class="invalid-feedback" th:errors="*{model}"></div>
+            </div>
+            <div class="mb-3">
+                <label for="year" class="form-label">Năm sản xuất</label>
+                <input type="number" class="form-control" id="year" th:field="*{year}" required>
+                <div class="invalid-feedback" th:errors="*{year}"></div>
+            </div>
+            <div class="mb-3">
+                <label for="transmission" class="form-label">Hộp số</label>
+                <select class="form-select" id="transmission" th:field="*{transmission}" required>
+                    <option value="">Chọn loại hộp số</option>
+                    <option value="MANUAL">Số sàn</option>
+                    <option value="AUTO">Số tự động</option>
+                </select>
+                <div class="invalid-feedback" th:errors="*{transmission}"></div>
+            </div>
+            <div class="mb-3">
+                <label for="fuelType" class="form-label">Loại nhiên liệu</label>
+                <select class="form-select" id="fuelType" th:field="*{fuelType}" required>
+                    <option value="">Chọn loại nhiên liệu</option>
+                    <option value="PETROL">Xăng</option>
+                    <option value="DIESEL">Dầu</option>
+                    <option value="ELECTRIC">Điện</option>
+                    <option value="HYBRID">Hybrid</option>
+                </select>
+                <div class="invalid-feedback" th:errors="*{fuelType}"></div>
+            </div>
+            <div class="mb-3">
+                <label for="seats" class="form-label">Số ghế</label>
+                <input type="number" class="form-control" id="seats" th:field="*{seats}" required>
+                <div class="invalid-feedback" th:errors="*{seats}"></div>
+            </div>
+            <div class="mb-3">
+                <label for="dailyPrice" class="form-label">Giá thuê mỗi ngày ($)</label>
+                <input type="number" step="0.01" class="form-control" id="dailyPrice" th:field="*{dailyPrice}" required>
+                <div class="invalid-feedback" th:errors="*{dailyPrice}"></div>
+            </div>
+            <div class="mb-3">
+                <label for="imageUrl" class="form-label">URL ảnh</label>
+                <input type="text" class="form-control" id="imageUrl" th:field="*{imageUrl}">
+                <div class="invalid-feedback" th:errors="*{imageUrl}"></div>
+            </div>
+            <div class="mb-3">
+                <label for="city" class="form-label">Thành phố</label>
+                <input type="text" class="form-control" id="city" th:field="*{city}" required>
+                <div class="invalid-feedback" th:errors="*{city}"></div>
+            </div>
+            <button type="submit" class="btn btn-primary" th:text="${carForm.id != null} ? 'Cập nhật' : 'Thêm xe'"></button>
+        </form>
+    </div>
+    <!-- Bootstrap JavaScript for form validation -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            const forms = document.querySelectorAll('.needs-validation');
+            Array.prototype.slice.call(forms).forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        })();
+    </script>
+</body>
+</html>

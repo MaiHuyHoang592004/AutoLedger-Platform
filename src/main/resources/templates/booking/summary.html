@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tóm tắt chuyến đi - Car Rental System</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .summary-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .summary-header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px 12px 0 0;
+            text-align: center;
+        }
+
+        .summary-header h2 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+        }
+
+        .summary-header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .summary-body {
+            padding: 32px;
+        }
+
+        .trip-overview {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .overview-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .overview-item {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .overview-label {
+            font-weight: 600;
+            color: #64748b;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .overview-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .photo-comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .photo-section {
+            text-align: center;
+        }
+
+        .photo-section h4 {
+            margin: 0 0 12px 0;
+            color: #374151;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .photo-item {
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #e5e7eb;
+            transition: transform 0.2s;
+        }
+
+        .photo-item:hover {
+            transform: scale(1.05);
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+        }
+
+        .charges-section {
+            margin-bottom: 32px;
+        }
+
+        .charges-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .charges-breakdown {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .charges-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .charges-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .charge-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #fbbf24;
+        }
+
+        .charge-item:last-child {
+            border-bottom: none;
+            font-weight: 700;
+            color: #92400e;
+            font-size: 18px;
+        }
+
+        .charge-item.positive {
+            color: #dc2626;
+        }
+
+        .charge-item.negative {
+            color: #059669;
+        }
+
+        .total-section {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .total-amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 8px;
+        }
+
+        .total-label {
+            color: #166534;
+            font-weight: 600;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 32px;
+        }
+
+        .btn-accept {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-accept:hover {
+            background: #059669;
+        }
+
+        .btn-dispute {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-dispute:hover {
+            background: #d97706;
+        }
+
+        .btn-review {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-review:hover {
+            background: #5855eb;
+        }
+
+        .status-completed {
+            background: #dcfce7;
+            color: #166534;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .info-box h4 {
+            margin: 0 0 8px 0;
+            color: #1e40af;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-box p {
+            margin: 0;
+            color: #3730a3;
+        }
+
+        @media (max-width: 768px) {
+            .overview-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .photo-comparison {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn-accept, .btn-dispute, .btn-review {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a th:href="@{/}" style="text-decoration: none; color: inherit;">
+                        <span class="logo-text">Car rental System</span>
+                    </a>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link">Đơn của tôi</a>
+                </nav>
+                <div class="header-actions">
+                    <div class="user-dropdown-container">
+                        <button class="user-btn">
+                            <span sec:authorize="isAuthenticated()" th:text="${#authentication.name}" class="username-display"></span>
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div style="margin-bottom: 32px; text-align: center;">
+                <h1>Tóm tắt chuyến đi</h1>
+                <p style="color: #6b7280;">Xem lại chi tiết và xác nhận các khoản phí phát sinh</p>
+            </div>
+
+            <div class="summary-container">
+                <div class="summary-header">
+                    <h2><i class="fas fa-check-circle"></i> Chuyến đi đã hoàn tất</h2>
+                    <p>Đơn #<span th:text="${bookingId}"></span> - <span th:text="${booking.startAt} + ' đến ' + ${booking.endAt}"></span></p>
+                </div>
+
+                <div class="summary-body">
+                    <!-- Status -->
+                    <div class="info-box">
+                        <h4><i class="fas fa-info-circle"></i> Trạng thái</h4>
+                        <p><span class="status-completed"><i class="fas fa-check"></i> Đã hoàn tất</span></p>
+                    </div>
+
+                    <!-- Trip Overview -->
+                    <div class="trip-overview">
+                        <h3 class="overview-header">
+                            <i class="fas fa-route"></i>
+                            Tổng quan chuyến đi
+                        </h3>
+                        <div class="overview-grid">
+                            <div class="overview-item">
+                                <div class="overview-label">Km ban đầu</div>
+                                <div class="overview-value" th:text="${checkinInspection?.odometerKm ?: 'N/A'} + ' km'"></div>
+                            </div>
+                            <div class="overview-item">
+                                <div class="overview-label">Km cuối</div>
+                                <div class="overview-value" th:text="${checkoutInspection?.odometerKm ?: 'N/A'} + ' km'"></div>
+                            </div>
+                            <div class="overview-item">
+                                <div class="overview-label">Km đã đi</div>
+                                <div class="overview-value" th:text="${(checkoutInspection?.odometerKm ?: 0) - (checkinInspection?.odometerKm ?: 0)} + ' km'"></div>
+                            </div>
+                            <div class="overview-item">
+                                <div class="overview-label">Nhiên liệu ban đầu</div>
+                                <div class="overview-value" th:text="${checkinInspection?.fuelLevelPct ?: 'N/A'} + '%'"></div>
+                            </div>
+                            <div class="overview-item">
+                                <div class="overview-label">Nhiên liệu cuối</div>
+                                <div class="overview-value" th:text="${checkoutInspection?.fuelLevelPct ?: 'N/A'} + '%'"></div>
+                            </div>
+                            <div class="overview-item">
+                                <div class="overview-label">Thời gian thuê</div>
+                                <div class="overview-value" th:text="${#temporals.format(booking.startAt, 'dd/MM')} + ' - ' + ${#temporals.format(booking.endAt, 'dd/MM')}"></div>
+                            </div>
+                        </div>
+
+                        <!-- Photo Comparison -->
+                        <div class="photo-comparison">
+                            <div class="photo-section">
+                                <h4>Khi nhận xe</h4>
+                                <div th:if="${checkinPhotos != null and !checkinPhotos.isEmpty()}" class="photo-item">
+                                    <img th:src="${checkinPhotos[0]}" alt="Check-in photo" onclick="openImageModal(this.src)">
+                                </div>
+                                <div th:if="${checkinPhotos == null or checkinPhotos.isEmpty()}" class="photo-item" style="background: #f3f4f6; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-image" style="color: #9ca3af; font-size: 24px;"></i>
+                                </div>
+                            </div>
+                            <div class="photo-section">
+                                <h4>Khi trả xe</h4>
+                                <div th:if="${checkoutPhotos != null and !checkoutPhotos.isEmpty()}" class="photo-item">
+                                    <img th:src="${checkoutPhotos[0]}" alt="Check-out photo" onclick="openImageModal(this.src)">
+                                </div>
+                                <div th:if="${checkoutPhotos == null or checkoutPhotos.isEmpty()}" class="photo-item" style="background: #f3f4f6; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-image" style="color: #9ca3af; font-size: 24px;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Host Earnings Section (chỉ hiển thị cho host) -->
+                    <div th:if="${isHostView}" class="charges-section">
+                        <h3 class="charges-header">
+                            <i class="fas fa-wallet"></i>
+                            Thu nhập của bạn
+                        </h3>
+
+                        <div class="total-section">
+                            <div class="total-amount" th:text="${#numbers.formatInteger(hostEarnings ?: 0, 0, 'COMMA')} + ' VND'"></div>
+                            <div class="total-label">Số tiền bạn sẽ nhận được</div>
+                            <p style="margin: 8px 0 0 0; font-size: 14px; color: #6b7280;">
+                                Đã trừ 10% phí nền tảng từ <span th:text="${#numbers.formatInteger(baseAmount ?: 0, 0, 'COMMA')} + ' VND'"></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Guest Charges Section (chỉ hiển thị cho guest) -->
+                    <div th:if="${!isHostView}" class="charges-section">
+                        <h3 class="charges-header">
+                            <i class="fas fa-calculator"></i>
+                            Chi tiết thanh toán
+                        </h3>
+
+                        <div class="charges-breakdown">
+                            <h4 class="charges-title">
+                                <i class="fas fa-receipt"></i>
+                                Các khoản phí phát sinh
+                            </h4>
+                            <ul class="charges-list">
+                                <li class="charge-item">
+                                    <span>Phí thuê xe cơ bản</span>
+                                    <span th:text="${#numbers.formatInteger(baseAmount ?: 0, 0, 'COMMA')} + ' VND'"></span>
+                                </li>
+                                <li th:if="${kmOverCharge > 0}" class="charge-item positive">
+                                    <span>Vượt km giới hạn (<span th:text="${kmOver}"></span> km)</span>
+                                    <span th:text="${#numbers.formatInteger(kmOverCharge, 0, 'COMMA')} + ' VND'"></span>
+                                </li>
+                                <li th:if="${fuelCharge > 0}" class="charge-item positive">
+                                    <span>Thiếu nhiên liệu</span>
+                                    <span th:text="${#numbers.formatInteger(fuelCharge, 0, 'COMMA')} + ' VND'"></span>
+                                </li>
+                                <li th:if="${cleaningCharge > 0}" class="charge-item positive">
+                                    <span>Phí dọn vệ sinh</span>
+                                    <span th:text="${#numbers.formatInteger(cleaningCharge, 0, 'COMMA')} + ' VND'"></span>
+                                </li>
+                                <li class="charge-item">
+                                    <span><strong>Tổng cộng</strong></span>
+                                    <span th:text="${#numbers.formatInteger(totalAmount ?: 0, 0, 'COMMA')} + ' VND'"></span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="total-section">
+                            <div class="total-amount" th:text="${#numbers.formatInteger(totalAmount ?: 0, 0, 'COMMA')} + ' VND'"></div>
+                            <div class="total-label">Tổng tiền cần thanh toán</div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons (chỉ hiển thị cho guest) -->
+                    <div th:if="${!isHostView}" class="action-buttons">
+                        <button type="button" class="btn-accept" onclick="acceptCharges()">
+                            <i class="fas fa-check"></i>
+                            Đồng ý thanh toán
+                        </button>
+                        <button type="button" class="btn-dispute" onclick="disputeCharges()">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Khiếu nại phí
+                        </button>
+                        <button type="button" class="btn-review" onclick="goToReviews()">
+                            <i class="fas fa-star"></i>
+                            Đánh giá
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Image Modal -->
+    <div id="imageModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center;">
+        <img id="modalImage" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+        <button onclick="closeImageModal()" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.8); border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer;">
+            <i class="fas fa-times" style="color: #333;"></i>
+        </button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>©2025 Car Rental System</p>
+            </div>
+        </div>
+    </footer>
+
+    <script th:src="@{/js/script.js}"></script>
+    <script>
+        let bookingId = /*[[${bookingId}]]*/ 0;
+
+        function openImageModal(src) {
+            document.getElementById('modalImage').src = src;
+            document.getElementById('imageModal').style.display = 'flex';
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+
+        async function acceptCharges() {
+            if (!confirm('Bạn xác nhận đồng ý thanh toán các khoản phí phát sinh này?')) {
+                return;
+            }
+
+            const btn = document.querySelector('.btn-accept');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`/api/bookings/${bookingId}/charges/accept`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Idempotency-Key': generateIdempotencyKey()
+                    }
+                });
+
+                if (response.ok) {
+                    alert('Đã xác nhận thanh toán! Cảm ơn bạn đã sử dụng dịch vụ.');
+                    window.location.href = `/bookings/${bookingId}`;
+                } else {
+                    throw new Error('Có lỗi xảy ra khi xác nhận thanh toán');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Lỗi: ' + error.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function disputeCharges() {
+            window.location.href = `/bookings/${bookingId}/charges-dispute`;
+        }
+
+        function goToReviews() {
+            window.location.href = `/bookings/${bookingId}/reviews`;
+        }
+
+        function generateIdempotencyKey() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('imageModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeImageModal();
+            }
+        });
+    </script>
+</body>
+</html>

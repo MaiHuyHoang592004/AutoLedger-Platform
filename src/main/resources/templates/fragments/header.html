@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <!-- Các thẻ meta và link CSS có thể để ở đây nếu bạn muốn nó tự động include -->
+    <!-- Nhưng thường thì link CSS sẽ được để ở từng trang hoặc trong layout chính -->
+</head>
+<body>
+<header class="header" th:fragment="header">
+    <div class="container">
+        <div class="header-content">
+            <div class="logo">
+                <a th:href="@{/}"><span class="logo-text">Car Rental Auto 88</span></a>
+            </div>
+            <nav class="nav">
+                <a th:href="@{/}" class="nav-link">Trang chủ</a>
+                <a th:href="@{/cars/add}" class="nav-link" sec:authorize="hasRole('HOST')">Cho thuê xe</a>
+                <a th:href="@{/cars/list}" class="nav-link" sec:authorize="hasRole('HOST')">Xe của tôi</a>
+                <a th:href="@{/cars/listings}" class="nav-link" sec:authorize="hasRole('HOST')">Bài đăng</a>
+                <a th:href="@{/host/bookings}" class="nav-link" sec:authorize="hasRole('HOST')">Đơn đặt</a>
+                <a th:href="@{/bookings/my-bookings}" class="nav-link" sec:authorize="isAuthenticated()">Đơn của tôi</a>
+                <a th:href="@{/search}" class="nav-link">Tìm xe</a>
+            </nav>
+            <div class="header-actions">
+                <button class="menu-btn" aria-label="Menu"><i class="fas fa-bars"></i></button>
+                <div class="user-dropdown-container">
+                    <button class="user-btn" aria-label="User menu">
+                        <span sec:authorize="isAuthenticated()" th:text="${#authentication.name}" class="username-display"></span>
+                        <i class="fas fa-user-circle"></i>
+                    </button>
+                    <div class="user-dropdown-menu">
+                        <div sec:authorize="isAnonymous()">
+                            <a th:href="@{/login}">Đăng nhập</a>
+                            <a th:href="@{/register}">Đăng ký</a>
+                            <a th:href="@{/register(role='HOST')}">Trở thành chủ xe</a>
+                        </div>
+                        <div sec:authorize="isAuthenticated()">
+                            <a th:href="@{/profile}">Hồ sơ của tôi</a>
+                            <a th:href="@{/change-password}">Đổi mật khẩu</a>
+                            <a th:href="@{/bookings/my}" sec:authorize="hasRole('GUEST')">Đơn thuê của tôi</a>
+                            <form th:action="@{/logout}" method="post" class="logout-form">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                <button type="submit" class="logout-button-as-link">Đăng xuất</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+</body>
+</html>

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đánh giá chuyến đi - Car Rental System</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .review-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .review-header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px 12px 0 0;
+            text-align: center;
+        }
+
+        .review-header h2 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+        }
+
+        .review-header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .review-body {
+            padding: 32px;
+        }
+
+        .booking-summary {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 32px;
+        }
+
+        .booking-summary h3 {
+            margin: 0 0 12px 0;
+            color: #1e293b;
+            font-size: 16px;
+        }
+
+        .booking-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .booking-info:last-child {
+            margin-bottom: 0;
+        }
+
+        .booking-label {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .booking-value {
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .rating-section {
+            margin-bottom: 32px;
+        }
+
+        .rating-section h3 {
+            margin: 0 0 16px 0;
+            color: #1e293b;
+            font-size: 18px;
+        }
+
+        .star-rating {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .star {
+            font-size: 32px;
+            color: #d1d5db;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .star:hover,
+        .star.active {
+            color: #fbbf24;
+        }
+
+        .rating-text {
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        .character-count {
+            text-align: right;
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: #5855eb;
+        }
+
+        .submit-btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        .review-tips {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .review-tips h4 {
+            margin: 0 0 8px 0;
+            color: #1e40af;
+            font-size: 14px;
+        }
+
+        .review-tips ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #3730a3;
+            font-size: 14px;
+        }
+
+        .review-tips li {
+            margin-bottom: 4px;
+        }
+
+        .review-tips li:last-child {
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 768px) {
+            .review-body {
+                padding: 24px;
+            }
+
+            .booking-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a th:href="@{/}" style="text-decoration: none; color: inherit;">
+                        <span class="logo-text">Car rental System</span>
+                    </a>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link">Đơn của tôi</a>
+                </nav>
+                <div class="header-actions">
+                    <div class="user-dropdown-container">
+                        <button class="user-btn">
+                            <span sec:authorize="isAuthenticated()" th:text="${#authentication.name}" class="username-display"></span>
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div style="margin-bottom: 32px; text-align: center;">
+                <h1>Đánh giá chuyến đi</h1>
+                <p style="color: #6b7280;">Hãy chia sẻ trải nghiệm của bạn để giúp cộng đồng</p>
+            </div>
+
+            <!-- DEBUG PANEL -->
+            <div class="alert alert-info mb-4" style="background: #e0f2fe; border: 1px solid #0ea5e9; color: #0c4a6e;">
+                <h6><i class="fas fa-bug"></i> DEBUG INFORMATION</h6>
+                <div style="font-family: monospace; font-size: 12px;">
+                    <div><strong>Template Variables:</strong></div>
+                    <div>- bookingId: <span th:text="${bookingId}" style="color: #dc2626; font-weight: bold;"></span></div>
+                    <div>- booking: <span th:text="${booking != null ? 'SET' : 'NULL'}" style="color: #dc2626; font-weight: bold;"></span></div>
+                    <div>- toUserId: <span th:text="${toUserId}" style="color: #dc2626; font-weight: bold;"></span></div>
+
+                    <div style="margin-top: 10px;"><strong>JavaScript Variables:</strong></div>
+                    <div>- bookingId (JS): <span id="debug-bookingId" style="color: #dc2626; font-weight: bold;">loading...</span></div>
+                    <div>- selectedRating: <span id="debug-rating" style="color: #dc2626; font-weight: bold;">0</span></div>
+                    <div>- comment length: <span id="debug-comment" style="color: #dc2626; font-weight: bold;">0</span></div>
+
+                    <div style="margin-top: 10px;"><strong>Request Data:</strong></div>
+                    <div>- URL: <span id="debug-url" style="color: #dc2626; font-weight: bold;">not set</span></div>
+                    <div>- Body: <span id="debug-body" style="color: #dc2626; font-weight: bold;">not set</span></div>
+
+                    <div style="margin-top: 10px;"><strong>Response:</strong></div>
+                    <div>- Status: <span id="debug-status" style="color: #dc2626; font-weight: bold;">not sent</span></div>
+                    <div>- Response: <span id="debug-response" style="color: #dc2626; font-weight: bold;">not received</span></div>
+                </div>
+            </div>
+
+            <div class="review-container">
+                <div class="review-header">
+                    <h2><i class="fas fa-star"></i> Đánh giá</h2>
+                    <p>Đơn #<span th:text="${bookingId}"></span></p>
+                </div>
+
+                <div class="review-body">
+                    <!-- Booking Summary -->
+                    <div class="booking-summary">
+                        <h3><i class="fas fa-info-circle"></i> Thông tin chuyến đi</h3>
+                        <div class="booking-info">
+                            <span class="booking-label">Thời gian:</span>
+                            <span class="booking-value" th:text="${booking.startAt} + ' - ' + ${booking.endAt}"></span>
+                        </div>
+                        <div class="booking-info">
+                            <span class="booking-label">Xe:</span>
+                            <span class="booking-value" th:text="${booking.listing.vehicle.make} + ' ' + ${booking.listing.vehicle.model}"></span>
+                        </div>
+                        <div class="booking-info">
+                            <span class="booking-label">Biển số:</span>
+                            <span class="booking-value" th:text="${booking.listing.vehicle.plateMasked ?: 'N/A'}"></span>
+                        </div>
+                    </div>
+
+                    <!-- Review Tips -->
+                    <div class="review-tips">
+                        <h4><i class="fas fa-lightbulb"></i> Mẹo đánh giá hữu ích</h4>
+                        <ul>
+                            <li>Đánh giá trung thực giúp người khác có quyết định tốt hơn</li>
+                            <li>Nhắc đến điểm mạnh và điểm cần cải thiện</li>
+                            <li>Tránh bình luận cá nhân hoặc thông tin nhạy cảm</li>
+                        </ul>
+                    </div>
+
+                    <!-- Rating Section -->
+                    <div class="rating-section">
+                        <h3>Đánh giá tổng thể</h3>
+                        <div class="star-rating" id="starRating">
+                            <i class="fas fa-star star" data-rating="1"></i>
+                            <i class="fas fa-star star" data-rating="2"></i>
+                            <i class="fas fa-star star" data-rating="3"></i>
+                            <i class="fas fa-star star" data-rating="4"></i>
+                            <i class="fas fa-star star" data-rating="5"></i>
+                        </div>
+                        <div class="rating-text" id="ratingText">Chưa chọn đánh giá</div>
+                        <input type="hidden" name="rating" id="ratingInput" value="0">
+                    </div>
+
+                    <!-- Comment Section -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            Nhận xét chi tiết
+                        </label>
+                        <textarea name="comment" id="commentTextarea" class="form-textarea"
+                                  placeholder="Hãy chia sẻ trải nghiệm của bạn về chuyến đi, chất lượng xe, dịch vụ..."></textarea>
+                        <div class="character-count">
+                            <span id="charCount">0</span>/500 ký tự
+                        </div>
+                    </div>
+
+                    <button type="button" class="submit-btn" id="submitBtn" onclick="submitReview()">
+                        <i class="fas fa-paper-plane"></i> Gửi đánh giá
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+            <p>©2025 Car Rental System</p>
+        </div>
+    </div>
+    </footer>
+
+    <script th:src="@{/js/script.js}"></script>
+    <script>
+        // Template variables passed to JavaScript
+        let bookingId = [[${bookingId}]];
+        let selectedRating = 0;
+
+        // DEBUG: Display variables
+        console.log('=== TEMPLATE VARIABLES ===');
+        console.log('bookingId from template:', bookingId);
+        console.log('booking object exists:', [[${booking != null}]]);
+        console.log('toUserId:', [[${toUserId}]]);
+
+        console.log('=== JAVASCRIPT VARIABLES ===');
+        console.log('bookingId (JS):', bookingId);
+        console.log('selectedRating (initial):', selectedRating);
+
+        // Update debug panel
+        function updateDebugPanel() {
+            document.getElementById('debug-bookingId').textContent = bookingId;
+            document.getElementById('debug-rating').textContent = selectedRating;
+            document.getElementById('debug-comment').textContent = document.getElementById('commentTextarea').value.length;
+        }
+
+        // Star rating functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update debug on load
+            updateDebugPanel();
+
+            const stars = document.querySelectorAll('.star');
+            const ratingText = document.getElementById('ratingText');
+            const ratingInput = document.getElementById('ratingInput');
+
+            const ratingTexts = {
+                0: 'Chưa chọn đánh giá',
+                1: 'Rất tệ',
+                2: 'Tệ',
+                3: 'Bình thường',
+                4: 'Tốt',
+                5: 'Xuất sắc'
+            };
+
+            stars.forEach(star => {
+                star.addEventListener('click', function() {
+                    const rating = parseInt(this.getAttribute('data-rating'));
+                    selectedRating = rating;
+
+                    // Update star display
+                    stars.forEach((s, index) => {
+                        if (index < rating) {
+                            s.classList.add('active');
+                        } else {
+                            s.classList.remove('active');
+                        }
+                    });
+
+                    // Update text and hidden input
+                    ratingText.textContent = ratingTexts[rating];
+                    ratingInput.value = rating;
+
+                    // Enable submit button
+                    document.getElementById('submitBtn').disabled = false;
+
+                    // Update debug
+                    updateDebugPanel();
+                });
+
+                star.addEventListener('mouseover', function() {
+                    const rating = parseInt(this.getAttribute('data-rating'));
+                    stars.forEach((s, index) => {
+                        if (index < rating) {
+                            s.classList.add('active');
+                        } else {
+                            s.classList.remove('active');
+                        }
+                    });
+                });
+            });
+
+            // Reset on mouse leave
+            document.getElementById('starRating').addEventListener('mouseleave', function() {
+                stars.forEach((s, index) => {
+                    if (index < selectedRating) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
+                });
+            });
+
+            // Character count for textarea
+            const textarea = document.getElementById('commentTextarea');
+            const charCount = document.getElementById('charCount');
+
+            textarea.addEventListener('input', function() {
+                const count = this.value.length;
+                charCount.textContent = count;
+
+                if (count > 500) {
+                    charCount.style.color = '#ef4444';
+                    this.value = this.value.substring(0, 500);
+                    charCount.textContent = '500';
+                } else {
+                    charCount.style.color = count > 450 ? '#f59e0b' : '#6b7280';
+                }
+
+                // Update debug
+                updateDebugPanel();
+            });
+        });
+
+        async function submitReview() {
+            // DEBUG: Update request data
+            document.getElementById('debug-url').textContent = `/api/reviews/${bookingId}`;
+            document.getElementById('debug-body').textContent = JSON.stringify({
+                rating: selectedRating,
+                comment: document.getElementById('commentTextarea').value.trim() || null
+            }, null, 2);
+
+            if (selectedRating === 0) {
+                alert('Vui lòng chọn số sao đánh giá');
+                return;
+            }
+
+            const comment = document.getElementById('commentTextarea').value.trim();
+
+            if (!confirm('Bạn có chắc muốn gửi đánh giá này?')) {
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
+            submitBtn.disabled = true;
+
+            // DEBUG: Update status
+            document.getElementById('debug-status').textContent = 'sending...';
+
+            try {
+                const response = await fetch(`/api/reviews/${bookingId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Idempotency-Key': generateIdempotencyKey()
+                    },
+                    body: JSON.stringify({
+                        rating: selectedRating,
+                        comment: comment || null
+                    })
+                });
+
+                // DEBUG: Update response
+                document.getElementById('debug-status').textContent = response.status + ' ' + response.statusText;
+
+                if (response.ok) {
+                    const responseText = await response.text();
+                    document.getElementById('debug-response').textContent = responseText || 'Success';
+                    alert('Cảm ơn bạn đã đánh giá! Ý kiến của bạn rất quý giá.');
+                    window.location.href = `/bookings/${bookingId}`;
+                } else {
+                    // Try to parse error response as JSON
+                    let errorMessage = 'Có lỗi xảy ra khi gửi đánh giá';
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.message) {
+                            errorMessage = errorData.message;
+                        }
+                        document.getElementById('debug-response').textContent = JSON.stringify(errorData, null, 2);
+                    } catch (parseError) {
+                        const errorText = await response.text();
+                        document.getElementById('debug-response').textContent = errorText;
+                        if (errorText) {
+                            errorMessage = errorText;
+                        }
+                    }
+                    throw new Error(errorMessage);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('debug-response').textContent = error.message;
+
+                // Show error in popup and on page
+                alert('Lỗi: ' + error.message);
+
+                // Also show error message on the page
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+                errorDiv.innerHTML = `
+                    <strong>Lỗi:</strong> ${error.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.review-container').appendChild(errorDiv);
+
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+
+        function generateIdempotencyKey() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+    </script>
+</body>
+</html>

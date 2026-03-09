@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả tìm kiếm xe - Huy Hoàng Auto 88</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a href="/" class="logo-text">Huy Hoàng auto 88</a>
+                </div>
+                <nav class="nav">
+                    <a href="/" class="nav-link">Trang chủ</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Search Form -->
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">Tìm kiếm xe</h1>
+            <form class="search-form" th:action="@{/search}" method="get">
+                <div class="search-group">
+                    <label class="search-label">Nơi bạn muốn nhận xe</label>
+                    <input type="text" name="location" class="search-input" th:value="${location}" placeholder="Thành phố, sân bay, địa chỉ, hoặc khách sạn" required>
+                </div>
+                <div class="search-group date-group">
+                    <label class="search-label">Nhận xe</label>
+                    <input type="date" name="pickupDate" class="search-input date-input" th:value="${pickupDate}">
+                </div>
+                <div class="search-group date-group">
+                    <label class="search-label">Trả xe</label>
+                    <input type="date" name="returnDate" class="search-input date-input" th:value="${returnDate}">
+                </div>
+                <div class="search-group">
+                    <label class="search-label">Giá tối đa (VND)</label>
+                    <input type="number" name="maxPrice" class="search-input" th:value="${maxPrice}" placeholder="Giá tối đa mỗi ngày">
+                </div>
+                <div class="search-group">
+                    <label class="search-label">Loại nhiên liệu</label>
+                    <select name="fuelType" class="search-input">
+                        <option value="" th:selected="${fuelType == null}">Tất cả</option>
+                        <option value="PETROL" th:selected="${fuelType == 'PETROL'}">Xăng</option>
+                        <option value="DIESEL" th:selected="${fuelType == 'DIESEL'}">Dầu</option>
+                        <option value="ELECTRIC" th:selected="${fuelType == 'ELECTRIC'}">Điện</option>
+                        <option value="HYBRID" th:selected="${fuelType == 'HYBRID'}">Hybrid</option>
+                    </select>
+                </div>
+                <div class="search-group">
+                    <label class="search-label">Số ghế</label>
+                    <input type="number" name="seats" class="search-input" th:value="${seats}" placeholder="Số ghế tối thiểu" min="1">
+                </div>
+                <button type="submit" class="search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Search Results -->
+    <div class="container" style="padding: 20px;">
+        <h1>Kết quả tìm kiếm cho <span th:text="${location} ?: 'Toàn bộ'"></span></h1>
+        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+        <div class="car-grid" th:if="${vehicles != null and !vehicles.isEmpty()}">
+            <div class="car-card" th:each="vehicle : ${vehicles}">
+                <div class="car-image">
+                    <img th:src="${vehicle.imageUrl}" th:alt="${vehicle.make + ' ' + vehicle.model}" onerror="this.src='https://via.placeholder.com/300x200?text=Vehicle+Image'">
+                </div>
+                <div class="car-info">
+                    <h3 th:text="${vehicle.make + ' ' + vehicle.model}"></h3>
+                    <div class="rating">
+                        <span class="stars" th:text="${vehicle.rating != null ? vehicle.rating + ' ⭐' : 'Chưa có đánh giá'}"></span>
+                        <span class="reviews" th:text="'(' + ${vehicle.numReviews != null ? vehicle.numReviews : 0} + ' chuyến)'"></span>
+                    </div>
+                    <div class="price">
+                        <span class="price-value" th:text="${vehicle.dailyPrice} + 'đ/ngày'"></span>
+                    </div>
+                    <a th:href="@{/rentals/book/{id}(id=${vehicle.id})}" class="book-btn">Đặt ngay</a>
+                </div>
+            </div>
+        </div>
+        <p th:if="${vehicles == null or vehicles.isEmpty()}">Không tìm thấy xe nào phù hợp.</p>
+    </div>
+
+    <script th:src="@{/js/script.js}"></script>
+</body>
+</html>

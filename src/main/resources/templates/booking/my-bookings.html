@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn Thuê Xe Của Tôi - Car rental System</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .booking-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-pending_host { background: #fef3c7; color: #d97706; }
+        .status-instant_confirmed { background: #d1fae5; color: #059669; }
+        .status-payment_authorized { background: #dbeafe; color: #2563eb; }
+        .status-in_progress { background: #fef3c7; color: #d97706; }
+        .status-completed { background: #d1fae5; color: #059669; }
+        .status-cancelled_guest { background: #fee2e2; color: #dc2626; }
+        .status-cancelled_host { background: #fee2e2; color: #dc2626; }
+
+        .booking-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .car-info {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .car-image {
+            width: 120px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .car-details h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            color: #111;
+        }
+
+        .booking-dates {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .booking-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: #6366f1; color: white; }
+        .btn-primary:hover { background: #5855eb; }
+
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+
+        .btn-disabled {
+            background: #d1d5db !important;
+            cursor: not-allowed !important;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .booking-ref {
+            font-size: 12px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .price-info {
+            text-align: right;
+            font-weight: 600;
+            color: #111;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: #6366f1;
+            border-bottom-color: #6366f1;
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: #374151;
+        }
+
+        @media (max-width: 768px) {
+            .booking-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .car-info {
+                flex-direction: column;
+            }
+
+            .car-image {
+                width: 100%;
+                height: 120px;
+            }
+
+            .booking-actions {
+                flex-wrap: wrap;
+            }
+
+            .btn-action {
+                flex: 1;
+                min-width: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a th:href="@{/}" style="text-decoration: none; color: inherit;">
+                        <span class="logo-text">Car rental Systerm</span>
+                    </a>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link">Đơn của tôi</a>
+                </nav>
+                <div class="header-actions">
+                    <button class="menu-btn">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
+                    <div class="user-dropdown-container">
+                        <button class="user-btn">
+                            <span sec:authorize="isAuthenticated()" th:text="${#authentication.name}" class="username-display"></span>
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+
+                        <div class="user-dropdown-menu">
+                            <div sec:authorize="isAuthenticated()">
+                                <a th:href="@{/profile}">Hồ sơ của tôi</a>
+                                <a th:href="@{/change-password}">Đổi mật khẩu</a>
+                                <a th:href="@{/bookings/my-bookings}" class="active">Đơn của tôi</a>
+                                <form th:action="@{/logout}" method="post" class="logout-form">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                    <button type="submit" class="logout-button-as-link">Đăng xuất</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+        <div class="container">
+            <div style="margin-bottom: 32px;">
+                <h1 style="margin-bottom: 8px;">Đơn Thuê Xe Của Tôi</h1>
+                <p style="color: #6b7280;">Quản lý tất cả các đơn đặt xe của bạn</p>
+            </div>
+
+            <!-- Status Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="filterBookings('all')">Tất cả</button>
+                <button class="tab-btn" onclick="filterBookings('active')">Đang hoạt động</button>
+                <button class="tab-btn" onclick="filterBookings('upcoming')">Sắp tới</button>
+                <button class="tab-btn" onclick="filterBookings('completed')">Hoàn thành</button>
+                <button class="tab-btn" onclick="filterBookings('cancelled')">Đã hủy</button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Đang tải dữ liệu...</p>
+            </div>
+
+            <!-- Bookings List -->
+            <div id="bookings-container">
+                <!-- Bookings will be loaded here via JavaScript -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <i class="fas fa-calendar-times"></i>
+                <h3>Chưa có đơn đặt xe nào</h3>
+                <p>Bạn chưa có đơn đặt xe nào. Hãy tìm và đặt xe ngay!</p>
+                <a th:href="@{/search}" class="btn-action btn-primary" style="display: inline-block; margin-top: 16px;">
+                    <i class="fas fa-search"></i> Tìm xe ngay
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>©2025 Huy Hoàng Auto 88</p>
+                <div class="footer-links">
+                    <a href="#">Điều khoản dịch vụ</a>
+                    <a href="#">Chính sách bảo mật</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal for booking actions -->
+    <div id="action-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 24px; border-radius: 12px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <h3 id="modal-title">Xác nhận hành động</h3>
+            <p id="modal-message">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+            <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
+                <button onclick="closeModal()" class="btn-action btn-secondary">Hủy</button>
+                <button id="confirm-action" class="btn-action btn-primary">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/script.js}"></script>
+    <script>
+        let allBookings = [];
+        let currentFilter = 'all';
+        // Get user role from Thymeleaf - will be injected by server
+        let currentUserRole = /*[[${currentUserRole}]]*/ 'CUSTOMER';
+
+        console.log('Current user role:', currentUserRole); // Debug log
+
+        // Load bookings on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBookings();
+        });
+
+        async function loadBookings() {
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('bookings-container');
+            const emptyState = document.getElementById('empty-state');
+
+            loading.style.display = 'block';
+            container.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/bookings/my-bookings', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    allBookings = await response.json();
+                    displayBookings(allBookings);
+                } else {
+                    throw new Error('Failed to load bookings');
+                }
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Lỗi tải dữ liệu</h3><p>Vui lòng thử lại sau.</p></div>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function displayBookings(bookings) {
+            const container = document.getElementById('bookings-container');
+            const emptyState = document.getElementById('empty-state');
+
+            if (!bookings || bookings.length === 0) {
+                emptyState.style.display = 'block';
+                container.innerHTML = '';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            // Create cards asynchronously
+            const cardPromises = bookings.map(booking => createBookingCard(booking));
+            const cards = await Promise.all(cardPromises);
+            container.innerHTML = cards.join('');
+        }
+
+        async function createBookingCard(booking) {
+            const statusClass = getStatusClass(booking.status);
+            const statusText = getStatusText(booking.status);
+            const actions = await getBookingActions(booking);
+
+            const startDate = new Date(booking.startAt).toLocaleDateString('vi-VN');
+            const endDate = new Date(booking.endAt).toLocaleDateString('vi-VN');
+
+            // Calculate outstanding amount for surcharge payment
+            let outstandingText = '';
+            let outstandingAmount = 0;
+            try {
+                const response = await fetch(`/bookings/api/${booking.id}/outstanding`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.outstanding > 0) {
+                        outstandingAmount = data.outstanding;
+                        outstandingText = `<div style="color: #dc2626; font-weight: 600; margin-top: 8px;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Còn nợ: ${formatCurrency(data.outstanding)} VND
+                        </div>`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching outstanding amount:', error);
+            }
+
+            return `
+                <div class="booking-card">
+                    <div class="booking-header">
+                        <div class="booking-ref">Đơn #${booking.id}</div>
+                        <span class="booking-status ${statusClass}">${statusText}</span>
+                    </div>
+
+                    <div class="car-info">
+                        <img src="${booking.listing?.vehicle?.imageUrls && booking.listing.vehicle.imageUrls.length > 0 ? booking.listing.vehicle.imageUrls[0] : '/images/no-image.png'}" alt="Car" class="car-image">
+                        <div class="car-details">
+                            <h3>${booking.listing?.vehicle?.make || 'N/A'} ${booking.listing?.vehicle?.model || 'N/A'} ${booking.listing?.vehicle?.year || ''}</h3>
+                            <div class="booking-dates">
+                                <i class="fas fa-calendar"></i> ${startDate} - ${endDate}
+                            </div>
+                            <div class="price-info">
+                                Tổng: ${formatCurrency(calculateTotal(booking))} VND
+                                ${outstandingText}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="booking-actions">
+                        ${actions}
+                    </div>
+                </div>
+            `;
+        }
+
+        function getStatusClass(status) {
+            const classes = {
+                'PENDING_HOST': 'status-pending_host',
+                'INSTANT_CONFIRMED': 'status-instant_confirmed',
+                'PAYMENT_AUTHORIZED': 'status-payment_authorized',
+                'IN_PROGRESS': 'status-in_progress',
+                'COMPLETED': 'status-completed',
+                'CANCELLED_GUEST': 'status-cancelled_guest',
+                'CANCELLED_HOST': 'status-cancelled_host'
+            };
+            return classes[status] || 'status-pending_host';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'PENDING_HOST': 'Chờ duyệt',
+                'INSTANT_CONFIRMED': 'Đã xác nhận',
+                'PAYMENT_AUTHORIZED': 'Đã thanh toán',
+                'IN_PROGRESS': 'Đang diễn ra',
+                'COMPLETED': 'Hoàn thành',
+                'CANCELLED_GUEST': 'Đã hủy',
+                'CANCELLED_HOST': 'Bị hủy'
+            };
+            return texts[status] || status;
+        }
+
+        async function getBookingActions(booking) {
+            const actions = [];
+            const status = booking.status;
+
+            // Check for outstanding surcharge payment first
+            let outstandingAmount = 0;
+            try {
+                const response = await fetch(`/bookings/api/${booking.id}/outstanding`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    outstandingAmount = data.outstanding || 0;
+                }
+            } catch (error) {
+                console.error('Error fetching outstanding amount:', error);
+            }
+
+            // If there's outstanding amount, show payment button
+            if (outstandingAmount > 0) {
+                actions.push(`<button class="btn-action btn-success" onclick="payOutstandingSurcharge(${booking.id}, ${outstandingAmount})">
+                    <i class="fas fa-credit-card"></i> Thanh toán phụ phí
+                </button>`);
+            }
+
+            switch (status) {
+                case 'PENDING_HOST':
+                    actions.push(`<button class="btn-action btn-danger" onclick="cancelBooking(${booking.id})">Hủy đơn</button>`);
+                    break;
+
+                case 'PAYMENT_AUTHORIZED':
+                    // Check if host has already checked in
+                    try {
+                        const response = await fetch(`/api/bookings/${booking.id}/events/CHECKIN_HOST`, {
+                            method: 'GET',
+                            headers: { 'Accept': 'application/json' }
+                        });
+
+                        if (response.ok) {
+                            const events = await response.json();
+                            if (events && events.length > 0) {
+                                // Host has checked in - show review check-in button
+                                actions.push(`<button class="btn-action btn-success" onclick="reviewCheckIn(${booking.id})">Xem biên bản check-in</button>`);
+                            } else {
+                                // Host hasn't checked in yet - show waiting message
+                                actions.push(`<span class="waiting-text" style="color: #6b7280; font-size: 14px;">Đang chờ chủ xe check-in...</span>`);
+                            }
+                        } else {
+                            actions.push(`<span class="waiting-text" style="color: #6b7280; font-size: 14px;">Đang chờ chủ xe check-in...</span>`);
+                        }
+                    } catch (error) {
+                        console.error('Error checking host check-in status:', error);
+                        actions.push(`<span class="waiting-text" style="color: #6b7280; font-size: 14px;">Đang chờ chủ xe check-in...</span>`);
+                    }
+                    actions.push(`<button class="btn-action btn-danger" onclick="cancelBooking(${booking.id})">Hủy đơn</button>`);
+                    break;
+
+                case 'IN_PROGRESS':
+                    // Only show check-out button for HOST users
+                    if (currentUserRole === 'HOST') {
+                        actions.push(`<button class="btn-action btn-primary" onclick="checkOut(${booking.id})">Check-out</button>`);
+                    } else {
+                        actions.push(`<span class="waiting-text" style="color: #6b7280; font-size: 14px;">Đang chờ chủ xe check-out...</span>`);
+                    }
+                    break;
+
+                case 'COMPLETED':
+                    actions.push(`<button class="btn-action btn-secondary" onclick="viewDetails(${booking.id})">Chi tiết</button>`);
+                    // Check if already reviewed
+                    actions.push(await generateReviewButton(booking.id));
+                    break;
+
+                default:
+                    actions.push(`<button class="btn-action btn-secondary" onclick="viewDetails(${booking.id})">Chi tiết</button>`);
+            }
+
+            return actions.join('');
+        }
+
+        function filterBookings(filter) {
+            currentFilter = filter;
+
+            // Update tab active state
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            let filteredBookings = allBookings;
+
+            switch (filter) {
+                case 'active':
+                    filteredBookings = allBookings.filter(b =>
+                        ['PAYMENT_AUTHORIZED', 'IN_PROGRESS'].includes(b.status)
+                    );
+                    break;
+                case 'upcoming':
+                    filteredBookings = allBookings.filter(b =>
+                        ['PENDING_HOST', 'INSTANT_CONFIRMED'].includes(b.status)
+                    );
+                    break;
+                case 'completed':
+                    filteredBookings = allBookings.filter(b => b.status === 'COMPLETED');
+                    break;
+                case 'cancelled':
+                    filteredBookings = allBookings.filter(b =>
+                        b.status.startsWith('CANCELLED')
+                    );
+                    break;
+            }
+
+            displayBookings(filteredBookings);
+        }
+
+        async function checkIn(bookingId) {
+            await performBookingAction(bookingId, 'checkin', 'Check-in chuyến đi?');
+        }
+
+        async function checkOut(bookingId) {
+            await performBookingAction(bookingId, 'checkout', 'Check-out và hoàn thành chuyến đi?');
+        }
+
+        async function cancelBooking(bookingId) {
+            await performBookingAction(bookingId, 'cancel', 'Hủy đơn đặt xe này?', false);
+        }
+
+        async function performBookingAction(bookingId, action, message, isHostCancellation = false) {
+            if (!confirm(message)) return;
+
+            showLoading(null, 'Đang xử lý...');
+
+            try {
+                const idempotencyKey = generateIdempotencyKey();
+                let url = `/api/bookings/${bookingId}/${action}`;
+
+                if (action === 'cancel') {
+                    url += `?isHostCancellation=${isHostCancellation}`;
+                }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Idempotency-Key': idempotencyKey
+                    }
+                });
+
+                if (response.ok) {
+                    showToast('Thao tác thành công!', 'success');
+                    loadBookings(); // Reload bookings
+                } else {
+                    const error = await response.text();
+                    throw new Error(error || 'Thao tác thất bại');
+                }
+            } catch (error) {
+                console.error('Action error:', error);
+                showToast(error.message || 'Có lỗi xảy ra', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function viewDetails(bookingId) {
+            window.location.href = `/bookings/${bookingId}`;
+        }
+
+        async function generateReviewButton(bookingId) {
+            try {
+                // Check if booking has already been reviewed
+                const response = await fetch(`/api/reviews/listing/${bookingId}`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const reviews = await response.json();
+                    // Check if current user has reviewed this booking
+                    // For now, assume if there are reviews, user has reviewed (simplified logic)
+                    // In real implementation, you'd check if current user's review exists
+                    if (reviews && reviews.length > 0) {
+                        return `<span class="text-success" style="font-size: 14px;"><i class="fas fa-check-circle"></i> Đã đánh giá</span>`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking review status:', error);
+            }
+
+            // If no review found, show review button
+            return `<button class="btn-action btn-warning" onclick="leaveReview(${bookingId})"><i class="fas fa-star"></i> Đánh giá</button>`;
+        }
+
+        function leaveReview(bookingId) {
+            window.location.href = `/bookings/${bookingId}/reviews`;
+        }
+
+        function reviewCheckIn(bookingId) {
+            window.location.href = `/bookings/${bookingId}/checkin-guest`;
+        }
+
+        async function payOutstandingSurcharge(bookingId, amount) {
+            if (!confirm(`Bạn có chắc chắn muốn thanh toán phụ phí ${formatCurrency(amount)} VND cho đơn này?`)) return;
+
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+            btn.disabled = true;
+
+            try {
+                const idempotencyKey = generateIdempotencyKey();
+                const response = await fetch(`/bookings/${bookingId}/pay-surcharge`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Idempotency-Key': idempotencyKey
+                    }
+                });
+
+                if (response.ok) {
+                    showToast('Thanh toán phụ phí thành công!', 'success');
+                    loadBookings(); // Reload bookings to update outstanding amounts
+                } else {
+                    const error = await response.text();
+                    throw new Error(error || 'Thanh toán thất bại');
+                }
+            } catch (error) {
+                console.error('Surcharge payment error:', error);
+                showToast(error.message || 'Có lỗi xảy ra khi thanh toán', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Add missing functions
+        function showLoading(element, message) {
+            // Simple loading implementation
+            if (element) {
+                element.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (message || 'Loading...');
+                element.disabled = true;
+            }
+        }
+
+        function hideLoading() {
+            // Reset loading state - find buttons with spinner and reset them
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(btn => {
+                if (btn.innerHTML.includes('fa-spinner')) {
+                    // Reset to original text (this is a simple implementation)
+                    btn.innerHTML = btn.innerHTML.replace(/<i class="fas fa-spinner fa-spin"><\/i> /, '');
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        function calculateTotal(booking) {
+            // Simple calculation - in real app, get from charges
+            const days = Math.ceil((new Date(booking.endAt) - new Date(booking.startAt)) / (1000 * 60 * 60 * 24));
+            return days * (booking.listing?.price24hCents || 0);
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN').format(amount);
+        }
+
+        function generateIdempotencyKey() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('action-modal').style.display = 'none';
+        }
+
+        // Enhanced toast function
+        function showToast(message, type = 'success') {
+            // Remove existing toast
+            const existingToast = document.querySelector('.toast-notification');
+            if (existingToast) existingToast.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.innerHTML = `
+                <div class="toast ${type}" role="alert">
+                    <div class="toast-header">
+                        <strong class="me-auto">${type === 'success' ? 'Thành công' : 'Lỗi'}</strong>
+                        <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+                    </div>
+                    <div class="toast-body">${message}</div>
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast.querySelector('.toast'));
+            bsToast.show();
+
+            setTimeout(() => toast.remove(), 5000);
+        }
+    </script>
+</body>
+</html>

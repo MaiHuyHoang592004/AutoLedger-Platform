@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-out Xe - Car Rental System</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .checkout-form {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .form-header {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px 12px 0 0;
+            text-align: center;
+        }
+
+        .form-header h2 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+        }
+
+        .form-header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .form-body {
+            padding: 32px;
+        }
+
+        .inspection-comparison {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .comparison-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .comparison-item {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .comparison-label {
+            font-weight: 600;
+            color: #64748b;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .comparison-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .comparison-change {
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .comparison-change.positive {
+            color: #dc2626;
+        }
+
+        .comparison-change.negative {
+            color: #059669;
+        }
+
+        .form-section {
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #059669;
+        }
+
+        .form-input.error {
+            border-color: #dc2626;
+        }
+
+        .error-message {
+            color: #dc2626;
+            font-size: 14px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #059669;
+        }
+
+        .checkbox-group label {
+            font-weight: 500;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        .photo-upload {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 32px;
+            text-align: center;
+            transition: border-color 0.2s;
+            cursor: pointer;
+        }
+
+        .photo-upload:hover {
+            border-color: #059669;
+        }
+
+        .photo-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .photo-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #e5e7eb;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+        }
+
+        .photo-remove {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .charges-preview {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 24px;
+        }
+
+        .charges-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .charges-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .charge-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #fbbf24;
+        }
+
+        .charge-item:last-child {
+            border-bottom: none;
+            font-weight: 700;
+            color: #92400e;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: #059669;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: #047857;
+        }
+
+        .submit-btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        .required {
+            color: #dc2626;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-body {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a th:href="@{/}" style="text-decoration: none; color: inherit;">
+                        <span class="logo-text">Car rental System</span>
+                    </a>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link">Đơn của tôi</a>
+                </nav>
+                <div class="header-actions">
+                    <div class="user-dropdown-container">
+                        <button class="user-btn">
+                            <span sec:authorize="isAuthenticated()" th:text="${#authentication.name}" class="username-display"></span>
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div style="margin-bottom: 32px; text-align: center;">
+                <h1>Check-out Xe</h1>
+                <p style="color: #6b7280;">Hoàn tất chuyến đi và tính toán phí phát sinh</p>
+            </div>
+
+            <form class="checkout-form" th:action="@{/bookings/{id}/checkout-host(id=${bookingId})}" method="post" enctype="multipart/form-data">
+                <div class="form-header">
+                    <h2><i class="fas fa-flag-checkered"></i> Kết thúc chuyến đi</h2>
+                    <p>Đơn #<span th:text="${bookingId}"></span> - <span th:text="${booking.startAt} + ' đến ' + ${booking.endAt}"></span></p>
+                </div>
+
+                <div class="form-body">
+                    <!-- Inspection Comparison -->
+                    <div class="inspection-comparison">
+                        <h3 class="comparison-header">
+                            <i class="fas fa-chart-line"></i>
+                            So sánh tình trạng xe
+                        </h3>
+                        <div class="comparison-grid">
+                            <div class="comparison-item">
+                                <div class="comparison-label">Km ban đầu</div>
+                                <div class="comparison-value" th:text="${checkinInspection?.odometerKm ?: 'N/A'} + ' km'"></div>
+                            </div>
+                            <div class="comparison-item">
+                                <div class="comparison-label">Nhiên liệu ban đầu</div>
+                                <div class="comparison-value" th:text="${checkinInspection?.fuelLevelPct ?: 'N/A'} + '%'"></div>
+                            </div>
+                            <div class="comparison-item">
+                                <div class="comparison-label">Km hiện tại</div>
+                                <div class="comparison-value" id="currentKm">-- km</div>
+                            </div>
+                            <div class="comparison-item">
+                                <div class="comparison-label">Nhiên liệu hiện tại</div>
+                                <div class="comparison-value" id="currentFuel">--%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Check-out Form -->
+                    <div class="form-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-clipboard-check"></i>
+                            Thông tin trả xe
+                        </h3>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Số km hiện tại <span class="required">*</span>
+                            </label>
+                            <input type="number" name="odometerKm" id="odometerKm" class="form-input" required min="0"
+                                   placeholder="Ví dụ: 35500" oninput="validateKmInput(); updateComparison()">
+                            <small style="color: #6b7280; display: block; margin-top: 4px;">
+                                Nhập số km hiển thị trên đồng hồ odometer
+                            </small>
+                            <div id="kmError" class="error-message">Số km hiện tại không được nhỏ hơn km ban đầu</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Mức nhiên liệu hiện tại (%) <span class="required">*</span>
+                            </label>
+                            <input type="number" name="fuelLevelPct" id="fuelLevelPct" class="form-input" required min="0" max="100"
+                                   placeholder="Ví dụ: 60" oninput="updateComparison()">
+                            <small style="color: #6b7280; display: block; margin-top: 4px;">
+                                Ước lượng mức nhiên liệu hiện tại (0-100%)
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Ảnh tình trạng xe khi trả <span class="required">*</span>
+                            </label>
+                            <div class="photo-upload" onclick="document.getElementById('photoInput').click()">
+                                <i class="fas fa-camera" style="font-size: 24px; color: #9ca3af; margin-bottom: 8px;"></i>
+                                <p style="margin: 0; color: #6b7280;">Nhấp để chọn ảnh hoặc kéo thả vào đây</p>
+                                <small style="color: #9ca3af;">Tối thiểu 1 ảnh, tối đa 10 ảnh</small>
+                            </div>
+                            <input type="file" id="photoInput" name="photos" multiple accept="image/*" style="display: none;">
+                            <div class="photo-preview" id="photoPreview"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Ghi chú (tùy chọn)
+                            </label>
+                            <textarea name="notes" class="form-input" rows="3"
+                                      placeholder="Ví dụ: Xe bị trầy nhẹ thêm ở cửa sau, khách có góp ý gì..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Additional Charges -->
+                    <div class="form-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-calculator"></i>
+                            Phí phát sinh (tự động tính)
+                        </h3>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" name="needsCleaning" id="needsCleaning" value="true">
+                            <label for="needsCleaning">Xe cần dọn vệ sinh (phí 50,000 VND)</label>
+                        </div>
+
+                        <div class="charges-preview" id="chargesPreview" style="display: none;">
+                            <h4 class="charges-title">
+                                <i class="fas fa-receipt"></i>
+                                Dự kiến phí phát sinh
+                            </h4>
+                            <ul class="charges-list" id="chargesList">
+                                <!-- Charges will be populated by JavaScript -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="submitBtn">
+                        <i class="fas fa-check-double"></i> Hoàn tất chuyến đi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>©2025 Car Rental System</p>
+            </div>
+        </div>
+    </footer>
+
+    <script th:src="@{/js/script.js}"></script>
+    <script th:inline="javascript">
+        let selectedFiles = [];
+        let checkinKm = /*[[${checkinInspection?.odometerKm ?: 0}]]*/ 0;
+        let checkinFuel = /*[[${checkinInspection?.fuelLevelPct ?: 0}]]*/ 0;
+        let kmLimitPerDay = /*[[${listing.kmLimit24h ?: 200}]]*/ 200;
+        let rentalDays = /*[[${rentalDays ?: 1}]]*/ 1;
+
+        document.getElementById('photoInput').addEventListener('change', handleFileSelect);
+        document.addEventListener('dragover', (e) => e.preventDefault());
+        document.addEventListener('drop', handleFileDrop);
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            addFiles(files);
+        }
+
+        function handleFileDrop(event) {
+            event.preventDefault();
+            const files = Array.from(event.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+            addFiles(files);
+        }
+
+        function addFiles(files) {
+            files.forEach(file => {
+                if (selectedFiles.length >= 10) return;
+                if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                    selectedFiles.push(file);
+                }
+            });
+            updatePhotoPreview();
+            validateForm();
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updatePhotoPreview();
+            validateForm();
+        }
+
+        function updatePhotoPreview() {
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = '';
+
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.className = 'photo-item';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <button type="button" class="photo-remove" onclick="removeFile(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    preview.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updateComparison() {
+            const currentKm = parseInt(document.getElementById('odometerKm').value) || 0;
+            const currentFuel = parseInt(document.getElementById('fuelLevelPct').value) || 0;
+
+            document.getElementById('currentKm').textContent = currentKm + ' km';
+            document.getElementById('currentFuel').textContent = currentFuel + '%';
+
+            calculateCharges();
+        }
+
+        function calculateCharges() {
+            const currentKmRaw = document.getElementById('odometerKm').value;
+            const currentFuelRaw = document.getElementById('fuelLevelPct').value;
+            const needsCleaning = document.getElementById('needsCleaning').checked;
+
+            const currentKm = parseInt(currentKmRaw, 10);
+            const currentFuel = parseInt(currentFuelRaw, 10);
+
+            let charges = [];
+            let totalCharges = 0;
+
+            // Validate cơ bản
+            if (isNaN(currentKm) || isNaN(currentFuel)) {
+                updateChargesPreview(charges, totalCharges);
+                return;
+            }
+
+            let kmUsed = currentKm - checkinKm;
+            let fuelUsed = checkinFuel - currentFuel;
+
+            if (kmUsed < 0) {
+                // km kết thúc < km ban đầu → host nhập sai
+                updateChargesPreview([], 0);
+                return;
+            }
+
+            // KM overcharge
+            const allowedKm = kmLimitPerDay * rentalDays;
+
+            if (kmUsed > allowedKm) {
+                const kmOver = kmUsed - allowedKm;
+                const kmCharge = kmOver * 5000;
+
+                charges.push({
+                    type: 'KM_OVER',
+                    amount: kmCharge,
+                    description: `${kmOver} km vượt giới hạn (${allowedKm} km cho ${rentalDays} ngày)`
+                });
+
+                totalCharges += kmCharge;
+            }
+
+            // Fuel charge (25000 VND/liter, assuming 50L tank)
+            if (fuelUsed > 0) {
+                const litersMissing = (fuelUsed / 100) * 50; // Approximate tank size
+                const fuelCharge = Math.round(litersMissing * 25000);
+                charges.push({
+                    type: 'FUEL',
+                    amount: fuelCharge,
+                    description: `${litersMissing.toFixed(1)}L nhiên liệu thiếu`
+                });
+                totalCharges += fuelCharge;
+            }
+
+            // Cleaning charge
+            if (needsCleaning) {
+                const cleaningCharge = 50000;
+                charges.push({
+                    type: 'CLEANING',
+                    amount: cleaningCharge,
+                    description: 'Phí dọn vệ sinh'
+                });
+                totalCharges += cleaningCharge;
+            }
+
+            updateChargesPreview(charges, totalCharges);
+        }
+
+        function updateChargesPreview(charges, total) {
+            const preview = document.getElementById('chargesPreview');
+            const list = document.getElementById('chargesList');
+
+            if (charges.length === 0) {
+                preview.style.display = 'none';
+                return;
+            }
+
+            list.innerHTML = '';
+            charges.forEach(charge => {
+                const li = document.createElement('li');
+                li.className = 'charge-item';
+                li.innerHTML = `
+                    <span>${charge.description}</span>
+                    <span>${charge.amount.toLocaleString()} VND</span>
+                `;
+                list.appendChild(li);
+            });
+
+            // Total
+            const totalLi = document.createElement('li');
+            totalLi.className = 'charge-item';
+            totalLi.innerHTML = `
+                <span><strong>Tổng phí phát sinh</strong></span>
+                <span><strong>${total.toLocaleString()} VND</strong></span>
+            `;
+            list.appendChild(totalLi);
+
+            preview.style.display = 'block';
+        }
+
+        function validateKmInput() {
+            const kmInput = document.getElementById('odometerKm');
+            const kmError = document.getElementById('kmError');
+            const currentKm = parseInt(kmInput.value) || 0;
+
+            if (currentKm < checkinKm) {
+                kmInput.classList.add('error');
+                kmError.style.display = 'block';
+                return false;
+            } else {
+                kmInput.classList.remove('error');
+                kmError.style.display = 'none';
+                return true;
+            }
+        }
+
+        function validateForm() {
+            const submitBtn = document.getElementById('submitBtn');
+            const odometer = document.getElementById('odometerKm').value;
+            const fuel = document.getElementById('fuelLevelPct').value;
+            const kmValid = validateKmInput();
+
+            const isValid = odometer && fuel && selectedFiles.length > 0 && kmValid;
+            submitBtn.disabled = !isValid;
+        }
+
+        // Event listeners
+        document.getElementById('needsCleaning').addEventListener('change', calculateCharges);
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('input', validateForm);
+        });
+
+        // Initial validation
+        validateForm();
+    </script>
+</body>
+</html>

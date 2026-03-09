@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" 
+      lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Người dùng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+            margin-top: 40px;
+        }
+        h1 { text-align: center; margin-bottom: 25px; }
+        .table thead th {
+            background-color: #dc3545; /* Màu đỏ cho admin */
+            color: white;
+            vertical-align: middle;
+        }
+        .table tbody td { vertical-align: middle; }
+        .action-forms { display: flex; gap: 5px; justify-content: center; }
+        .action-forms .form-select { min-width: 120px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-users-cog me-2"></i> Quản lý Người dùng</h1>
+
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i> <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i> <span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Vai trò</th>
+                        <th>Trạng thái</th>
+                        <th class="text-center">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="user : ${users}">
+                        <td th:text="${user.email}"></td>
+                        
+                        <td>
+                            <form th:if="${user.email != #authentication.name and user.role != 'ADMIN'}"
+                                  th:action="@{/admin/users/change-role/{id}(id=${user.id})}"
+                                  method="post" class="d-flex gap-2">
+
+                                <select name="newRole" class="form-select form-select-sm" style="width: 130px;">
+                                    <option value="CUSTOMER" th:selected="${user.role == 'CUSTOMER'}">Khách hàng</option>
+                                    <option value="HOST" th:selected="${user.role == 'HOST'}">Chủ xe</option>
+                                    <!-- Ẩn option ADMIN để ngăn gán role ADMIN qua web -->
+                                    <!-- <option value="ADMIN" th:selected="${user.role == 'ADMIN'}">Admin</option> -->
+                                </select>
+                                <button type="submit" class="btn btn-warning btn-sm"
+                                        onclick="return confirm('Bạn chắc chắn muốn đổi vai trò user này?')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </form>
+
+                            <span th:if="${user.email == #authentication.name or user.role == 'ADMIN'}"
+                                  th:text="${user.role}"
+                                  class="fw-bold text-danger"></span>
+                        </td>
+                        
+                        <td>
+                            <span th:if="${user.isActive}" class="badge bg-success">Đang hoạt động</span>
+                            <span th:unless="${user.isActive}" class="badge bg-secondary">Đã khóa</span>
+                        </td>
+                        
+                        <td class="text-center">
+                            <form th:if="${user.email != #authentication.name}" 
+                                  th:action="@{/admin/users/toggle-active/{id}(id=${user.id})}" 
+                                  method="post" style="display:inline;">
+                                  
+                                <button th:if="${user.isActive}" type="submit" class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Bạn chắc chắn muốn KHÓA user này?')">
+                                    <i class="fas fa-lock"></i> Khóa
+                                </button>
+                                <button th:unless="${user.isActive}" type="submit" class="btn btn-success btn-sm"
+                                        onclick="return confirm('Bạn chắc chắn muốn MỞ KHÓA user này?')">
+                                    <i class="fas fa-lock-open"></i> Mở khóa
+                                </button>
+                            </form>
+                            
+                            <span th:if="${user.email == #authentication.name}" class="text-muted fst-italic">Không thể thao tác</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

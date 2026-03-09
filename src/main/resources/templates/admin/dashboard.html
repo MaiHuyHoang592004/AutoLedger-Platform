@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Car Rental System</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .dashboard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .dashboard-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+
+        .dashboard-header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .stat-card.users { border-left-color: #10b981; }
+        .stat-card.cars { border-left-color: #f59e0b; }
+        .stat-card.hosts { border-left-color: #ef4444; }
+        .stat-card.complaints { border-left-color: #8b5cf6; }
+
+        .stat-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+            opacity: 0.8;
+        }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #1e293b;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .menu-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .menu-section h3 {
+            margin: 0 0 20px 0;
+            color: #1e293b;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-section h3 i {
+            color: #667eea;
+        }
+
+        .menu-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .menu-links li {
+            margin-bottom: 8px;
+        }
+
+        .menu-links a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: #374151;
+            border-radius: 8px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .menu-links a:hover {
+            background: #f3f4f6;
+            color: #1e293b;
+        }
+
+        .menu-links a i {
+            width: 20px;
+            color: #6b7280;
+        }
+
+        .menu-links a:hover i {
+            color: #667eea;
+        }
+
+        .quick-actions {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .quick-actions h3 {
+            margin: 0 0 16px 0;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .quick-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #374151;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .quick-action-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a th:href="@{/}" style="text-decoration: none; color: inherit;">
+                        <span class="logo-text">Car rental System</span>
+                    </a>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link">Dashboard</a>
+                </nav>
+                <div class="header-actions">
+                    <div class="user-dropdown-container">
+                        <button class="user-btn">
+                            <span sec:authorize="isAuthenticated()" th:text="${#authentication.name}" class="username-display"></span>
+                            <i class="fas fa-user-shield"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div class="dashboard-container">
+                <!-- Header -->
+                <div class="dashboard-header">
+                    <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
+                    <p>Quản lý hệ thống thuê xe</p>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-grid">
+                    <div class="stat-card users">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-number" th:text="${stats.totalUsers}"></div>
+                        <div class="stat-label">Tổng người dùng</div>
+                    </div>
+
+                    <div class="stat-card cars">
+                        <div class="stat-icon">
+                            <i class="fas fa-car"></i>
+                        </div>
+                        <div class="stat-number" th:text="${stats.totalCars}"></div>
+                        <div class="stat-label">Tổng xe</div>
+                    </div>
+
+                    <div class="stat-card hosts">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="stat-number" th:text="${stats.pendingHosts}"></div>
+                        <div class="stat-label">Host đang chờ duyệt</div>
+                    </div>
+
+                    <!-- Tạm thời ẩn complaints vì bảng chưa tạo -->
+                    <!-- <div class="stat-card complaints">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-number" th:text="${stats.totalComplaints}"></div>
+                        <div class="stat-label">Tổng khiếu nại</div>
+                    </div> -->
+                </div>
+
+                <!-- Menu Sections -->
+                <div class="menu-grid">
+                    <!-- User Management -->
+                    <div class="menu-section">
+                        <h3><i class="fas fa-users-cog"></i> Quản lý người dùng</h3>
+                        <ul class="menu-links">
+                            <li>
+                                <a th:href="@{/admin/users}">
+                                    <i class="fas fa-list"></i>
+                                    Danh sách người dùng
+                                </a>
+                            </li>
+                            <li>
+                                <a th:href="@{/admin/hosts/pending}">
+                                    <i class="fas fa-user-check"></i>
+                                    Duyệt yêu cầu làm host
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Car Management -->
+                    <div class="menu-section">
+                        <h3><i class="fas fa-car-side"></i> Quản lý xe</h3>
+                        <ul class="menu-links">
+                            <li>
+                                <a th:href="@{/admin/cars}">
+                                    <i class="fas fa-list"></i>
+                                    Danh sách xe
+                                </a>
+                            </li>
+                            <li>
+                                <a th:href="@{/admin/listings/pending}">
+                                    <i class="fas fa-clock"></i>
+                                    Bài đăng chờ duyệt
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Complaints Management - Tạm thời ẩn -->
+                    <!-- <div class="menu-section">
+                        <h3><i class="fas fa-comments"></i> Quản lý khiếu nại</h3>
+                        <ul class="menu-links">
+                            <li>
+                                <a th:href="@{/admin/complaints}">
+                                    <i class="fas fa-list"></i>
+                                    Danh sách khiếu nại
+                                </a>
+                            </li>
+                        </ul>
+                    </div> -->
+
+                    <!-- System Management -->
+                    <div class="menu-section">
+                        <h3><i class="fas fa-cogs"></i> Hệ thống</h3>
+                        <ul class="menu-links">
+                            <li>
+                                <a th:href="@{/}">
+                                    <i class="fas fa-home"></i>
+                                    Về trang chủ
+                                </a>
+                            </li>
+                            <li>
+                                <a th:href="@{/logout}">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    Đăng xuất
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <h3><i class="fas fa-bolt"></i> Thao tác nhanh</h3>
+                    <div class="quick-actions-grid">
+                        <a th:href="@{/admin/users}" class="quick-action-btn">
+                            <i class="fas fa-users"></i>
+                            Xem người dùng
+                        </a>
+                        <a th:href="@{/admin/cars}" class="quick-action-btn">
+                            <i class="fas fa-car"></i>
+                            Xem xe
+                        </a>
+                        <!-- Tạm thời ẩn complaints -->
+                        <!-- <a th:href="@{/admin/complaints}" class="quick-action-btn">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Xem khiếu nại
+                        </a> -->
+                        <a th:href="@{/admin/hosts/pending}" class="quick-action-btn">
+                            <i class="fas fa-user-check"></i>
+                            Duyệt host
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>©2025 Car Rental System - Admin Panel</p>
+            </div>
+        </div>
+    </footer>
+
+    <script th:src="@{/js/script.js}"></script>
+</body>
+</html>

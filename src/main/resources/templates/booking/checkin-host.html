@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in Xe - Car Rental System</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .checkin-form {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        .photo-upload {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 32px;
+            text-align: center;
+            transition: border-color 0.2s;
+            cursor: pointer;
+        }
+
+        .photo-upload:hover {
+            border-color: #6366f1;
+        }
+
+        .photo-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .photo-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+        }
+
+        .photo-remove {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: #5855eb;
+        }
+
+        .submit-btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        .required {
+            color: #ef4444;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .info-box h4 {
+            margin: 0 0 8px 0;
+            color: #1e40af;
+        }
+
+        .info-box p {
+            margin: 0;
+            color: #3730a3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a th:href="@{/}" style="text-decoration: none; color: inherit;">
+                        <span class="logo-text">Car rental System</span>
+                    </a>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link">Đơn của tôi</a>
+                </nav>
+                <div class="header-actions">
+                    <div class="user-dropdown-container">
+                        <button class="user-btn">
+                            <span sec:authorize="isAuthenticated()" th:text="${#authentication.name}" class="username-display"></span>
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div style="margin-bottom: 32px; text-align: center;">
+                <h1>Check-in Xe</h1>
+                <p style="color: #6b7280;">Ghi nhận tình trạng xe khi giao cho khách</p>
+            </div>
+
+            <form class="checkin-form" th:action="@{/bookings/{bookingId}/checkin-host(bookingId=${bookingId})}" method="post" enctype="multipart/form-data">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                <!-- DEBUG INFO BOX -->
+                <div th:if="${debug_bookingId}" class="info-box" style="background: #fef2f2; border-color: #fecaca;">
+                    <h4 style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> DEBUG INFO</h4>
+                    <p><strong>Booking ID:</strong> <span th:text="${debug_bookingId}"></span></p>
+                    <p><strong>User:</strong> <span th:text="${debug_user}"></span></p>
+                    <p><strong>Error:</strong> <span th:text="${debug_error}" style="color: #dc2626;"></span></p>
+                    <p><strong>Error Class:</strong> <span th:text="${debug_errorClass}" style="color: #dc2626;"></span></p>
+                    <div th:if="${debug_stackTrace}" style="margin-top: 10px; font-family: monospace; font-size: 12px; background: #f9f9f9; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                        <strong>Stack Trace:</strong><br>
+                        <pre th:text="${debug_stackTrace}" style="white-space: pre-wrap;"></pre>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h4><i class="fas fa-info-circle"></i> Thông tin đơn thuê</h4>
+                    <p><strong>Đơn #</strong><span th:text="${bookingId}"></span></p>
+                    <p><strong>Thời gian:</strong> <span th:text="${booking.startAt} + ' - ' + ${booking.endAt}"></span></p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Số km hiện tại <span class="required">*</span>
+                    </label>
+                    <input type="number" name="odometerKm" class="form-input" required min="0"
+                           placeholder="Ví dụ: 35000">
+                    <small style="color: #6b7280; display: block; margin-top: 4px;">
+                        Nhập số km hiển thị trên đồng hồ odometer
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Mức nhiên liệu (%) <span class="required">*</span>
+                    </label>
+                    <input type="number" name="fuelLevelPct" class="form-input" required min="0" max="100"
+                           placeholder="Ví dụ: 70">
+                    <small style="color: #6b7280; display: block; margin-top: 4px;">
+                        Ước lượng mức nhiên liệu hiện tại (0-100%)
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Ảnh tình trạng xe <span class="required">*</span>
+                    </label>
+                    <div class="photo-upload" onclick="document.getElementById('photoInput').click()">
+                        <i class="fas fa-camera" style="font-size: 24px; color: #9ca3af; margin-bottom: 8px;"></i>
+                        <p style="margin: 0; color: #6b7280;">Nhấp để chọn ảnh hoặc kéo thả vào đây</p>
+                        <small style="color: #9ca3af;">Tối thiểu 1 ảnh, tối đa 10 ảnh</small>
+                    </div>
+                    <input type="file" id="photoInput" name="photos" multiple accept="image/*" style="display: none;">
+                    <div class="photo-preview" id="photoPreview"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Ghi chú (tùy chọn)
+                    </label>
+                    <textarea name="notes" class="form-input" rows="3"
+                              placeholder="Ví dụ: Trầy nhẹ bên phải, lốp xe hơi mềm..."></textarea>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <i class="fas fa-check"></i> Xác nhận giao xe
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>©2025 Car Rental System</p>
+            </div>
+        </div>
+    </footer>
+
+    <script th:src="@{/js/script.js}"></script>
+    <script>
+        let selectedFiles = [];
+
+        document.getElementById('photoInput').addEventListener('change', handleFileSelect);
+        document.addEventListener('dragover', (e) => e.preventDefault());
+        document.addEventListener('drop', handleFileDrop);
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            addFiles(files);
+        }
+
+        function handleFileDrop(event) {
+            event.preventDefault();
+            const files = Array.from(event.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+            addFiles(files);
+        }
+
+        function addFiles(files) {
+            files.forEach(file => {
+                if (selectedFiles.length >= 10) return;
+                if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                    selectedFiles.push(file);
+                }
+            });
+            updatePhotoPreview();
+            validateForm();
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updatePhotoPreview();
+            validateForm();
+        }
+
+        function updatePhotoPreview() {
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = '';
+
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.className = 'photo-item';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <button type="button" class="photo-remove" onclick="removeFile(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    preview.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function validateForm() {
+            const submitBtn = document.getElementById('submitBtn');
+            const odometer = document.querySelector('[name="odometerKm"]').value;
+            const fuel = document.querySelector('[name="fuelLevelPct"]').value;
+
+            const isValid = odometer && fuel && selectedFiles.length > 0;
+            submitBtn.disabled = !isValid;
+        }
+
+        // Validate on input change
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('input', validateForm);
+        });
+
+        // Initial validation
+        validateForm();
+    </script>
+</body>
+</html>

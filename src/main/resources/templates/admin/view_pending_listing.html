@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết bài đăng chờ duyệt</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link th:href="@{/css/styles.css}" rel="stylesheet"/>
+</head>
+<body>
+<header th:replace="~{fragments/header :: header}"></header>
+
+<div class="container content-wrapper mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-eye me-2"></i> Xem chi tiết bài đăng</h1>
+        <a th:href="@{/admin/listings/pending}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Quay lại
+        </a>
+    </div>
+
+    <div th:object="${data}">
+        <!-- Thông tin xe -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-car"></i> Thông tin xe</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <img th:if="${data.vehicle.imageUrls != null and !#lists.isEmpty(data.vehicle.imageUrls)}"
+                             th:src="${data.vehicle.imageUrls[0]}"
+                             class="img-fluid rounded" style="max-height: 300px; object-fit: cover;">
+                        <p th:if="${data.vehicle.imageUrls == null or #lists.isEmpty(data.vehicle.imageUrls)}"
+                           class="text-muted">Không có ảnh</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Hãng:</strong> <span th:text="${data.vehicle.make}"></span></p>
+                        <p><strong>Mẫu:</strong> <span th:text="${data.vehicle.model}"></span></p>
+                        <p><strong>Năm:</strong> <span th:text="${data.vehicle.year}"></span></p>
+                        <p><strong>Giá gốc:</strong> <span th:text="${#numbers.formatInteger(data.vehicle.dailyPrice, 0, 'DEFAULT')} + ' VNĐ'"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thông tin bài đăng -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-file-alt"></i> Thông tin bài đăng</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Tiêu đề:</strong> <span th:text="${data.listing.title}"></span></p>
+                <p><strong>Mô tả

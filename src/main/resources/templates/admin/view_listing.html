@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết bài đăng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/styles.css}" rel="stylesheet"/>
+</head>
+<body>
+<header th:replace="~{fragments/header :: header}"></header>
+
+<div class="container content-wrapper mt-4">
+    <h1><i class="fas fa-car me-2"></i> Chi tiết bài đăng ID: <span th:text="${l['id']}"></span></h1>
+    <a th:href="@{/admin/listings/pending}" class="btn btn-secondary mb-3">
+        <i class="fas fa-arrow-left"></i> Quay lại
+    </a>
+
+    <!-- Thông tin xe -->
+    <div class="card mb-4">
+        <div class="card-header"><strong>Thông tin xe</strong></div>
+        <div class="card-body">
+            <p><strong>Hãng:</strong> <span th:text="${l['make']}"></span></p>
+            <p><strong>Mẫu:</strong> <span th:text="${l['model']}"></span></p>
+            <p><strong>Năm:</strong> <span th:text="${l['year']}"></span></p>
+            <div th:if="${l['imageUrls'] != null and !#lists.isEmpty(l['imageUrls'])}">
+                <strong>Ảnh xe:</strong><br>
+                <img th:each="url : ${l['imageUrls']}" th:src="${url}" class="img-thumbnail me-2 mb-2" style="max-width:150px;">
+            </div>
+            <span th:if="${l['imageUrls'] == null or #lists.isEmpty(l['imageUrls'])}">Không có ảnh</span>
+        </div>
+    </div>
+
+    <!-- Thông tin bài đăng -->
+    <div class="card mb-4">
+        <div class="card-header"><strong>Thông tin bài đăng</strong></div>
+        <div class="card-body">
+            <p><strong>Tiêu đề:</strong> <span th:text="${l['title']}"></span></p>
+            <p><strong>Mô tả:</strong> <span th:text="${l['description']} ?: 'Không có'"></span></p>
+            <p><strong>Giá 24h:</strong> <span th:text="${#numbers.formatInteger(l['price24hCents'], 0, 'DEFAULT')} + ' VNĐ'"></span></p>
+            <p><strong>Giới hạn km:</strong> <span th:text="${l['kmLimit24h']}"></span></p>
+            <p><strong>Đặt ngay:</strong> <span th:text="${l['instantBook'] ? 'Có' : 'Không'}"></span></p>
+            <p><strong>Chính sách hủy:</strong> <span th:text="${l['cancellationPolicy']}"></span></p>
+            <p><strong>Thành phố:</strong> <span th:text="${l['homeCity']}"></span></p>
+            <!-- <p><strong>Vị trí:</strong> 
+                <span th:text="${l['longitude']}"></span>, <span th:text="${l['latitude']}"></span>
+            </p> -->
+            <p><strong>Ngày tạo:</strong> 
+                <span th:text="${#temporals.format(l['createdAt'], 'dd/MM/yyyy HH:mm')}"></span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Chủ xe -->
+    <div class="card mb-4">
+        <div class="card-header"><strong>Chủ xe</strong></div>
+        <div class="card-body">
+            <p><strong>Email:</strong> <span th:text="${l['ownerEmail']} ?: 'Không có'"></span></p>
+            <p><strong>Họ tên:</strong> <span th:text="${l['ownerName']} ?: 'Chưa cung cấp'"></span></p>
+            <p><strong>SĐT:</strong> <span th:text="${l['ownerPhone']} ?: 'Chưa cung cấp'"></span></p>
+        </div>
+    </div>
+
+    <!-- Hành động -->
+    <div class="text-center">
+        <form th:action="@{/admin/listings/approve/{id}(id=${l['id']})}" method="post" class="d-inline">
+            <button class="btn btn-success" onclick="return confirm('Duyệt bài đăng này?')">
+                <i class="fas fa-check"></i> Duyệt
+            </button>
+        </form>
+        <form th:action="@{/admin/listings/reject/{id}(id=${l['id']})}" method="post" class="d-inline ms-2">
+            <button class="btn btn-danger" onclick="return confirm('Từ chối bài đăng này?')">
+                <i class="fas fa-times"></i> Từ chối
+            </button>
+        </form>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

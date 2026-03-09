@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
+    <title>Xác nhận Check-in - Car Rental System</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .confirmation-card {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .card-header h2 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+        }
+
+        .card-header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .card-body {
+            padding: 32px;
+        }
+
+        .inspection-section {
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .inspection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .inspection-item {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .inspection-label {
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .inspection-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .photo-item {
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #e5e7eb;
+            transition: transform 0.2s;
+        }
+
+        .photo-item:hover {
+            transform: scale(1.05);
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+        }
+
+        .notes-section {
+            background: #fefce8;
+            border: 1px solid #fde047;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .notes-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 8px;
+        }
+
+        .notes-content {
+            color: #78350f;
+            line-height: 1.5;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 32px;
+        }
+
+        .btn-confirm {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-confirm:hover {
+            background: #059669;
+        }
+
+        .btn-dispute {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-dispute:hover {
+            background: #d97706;
+        }
+
+        .warning-box {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .warning-box h4 {
+            margin: 0 0 8px 0;
+            color: #dc2626;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .warning-box p {
+            margin: 0;
+            color: #b91c1c;
+        }
+
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn-confirm, .btn-dispute {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .inspection-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a th:href="@{/}" style="text-decoration: none; color: inherit;">
+                        <span class="logo-text">Car rental System</span>
+                    </a>
+                </div>
+                <nav class="nav">
+                    <a href="#" class="nav-link">Đơn của tôi</a>
+                </nav>
+                <div class="header-actions">
+                    <div class="user-dropdown-container">
+                        <button class="user-btn">
+                            <span sec:authorize="isAuthenticated()" th:text="${#authentication.name}" class="username-display"></span>
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div style="margin-bottom: 32px; text-align: center;">
+                <h1>Xác nhận giao nhận xe</h1>
+                <p style="color: #6b7280;">Vui lòng kiểm tra thông tin và xác nhận đã nhận xe</p>
+            </div>
+
+            <div class="confirmation-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-handshake"></i> Biên bản giao xe</h2>
+                    <p>Đơn #<span th:text="${bookingId}"></span> - <span th:text="${booking.startAt} + ' đến ' + ${booking.endAt}"></span></p>
+                </div>
+
+                <div class="card-body">
+                    <div class="warning-box">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Quan trọng</h4>
+                        <p>Vui lòng kiểm tra kỹ tình trạng xe. Nếu có vấn đề, hãy chọn "Có vấn đề" để khiếu nại.</p>
+                    </div>
+
+                    <div class="inspection-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-clipboard-check"></i>
+                            Thông tin kiểm tra từ chủ xe
+                        </h3>
+
+                        <div class="inspection-grid">
+                            <div class="inspection-item">
+                                <div class="inspection-label">Số km</div>
+                                <div class="inspection-value" th:text="${hostInspection?.odometerKm ?: 'N/A'} + ' km'"></div>
+                            </div>
+                            <div class="inspection-item">
+                                <div class="inspection-label">Nhiên liệu</div>
+                                <div class="inspection-value" th:text="${hostInspection?.fuelLevelPct ?: 'N/A'} + '%'"></div>
+                            </div>
+                            <div class="inspection-item">
+                                <div class="inspection-label">Thời gian check-in</div>
+                                <div class="inspection-value" th:text="${#temporals.format(hostInspection?.createdAt ?: booking.createdAt, 'dd/MM/yyyy HH:mm')}"></div>
+                            </div>
+                        </div>
+
+                        <div th:if="${hostPhotos != null and !hostPhotos.isEmpty()}" class="photo-gallery">
+                            <div th:each="photo : ${hostPhotos}" class="photo-item">
+                                <img th:src="${photo}" alt="Tình trạng xe" onclick="openImageModal(this.src)">
+                            </div>
+                        </div>
+
+                        <div th:if="${hostInspection?.notes}" class="notes-section">
+                            <div class="notes-title">Ghi chú từ chủ xe:</div>
+                            <div class="notes-content" th:text="${hostInspection.notes}"></div>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="button" class="btn-confirm" onclick="confirmCheckIn()">
+                            <i class="fas fa-check"></i>
+                            Tôi đã nhận xe
+                        </button>
+                        <button type="button" class="btn-dispute" onclick="disputeCheckIn()">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Có vấn đề
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Image Modal -->
+    <div id="imageModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center;">
+        <img id="modalImage" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+        <button onclick="closeImageModal()" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.8); border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer;">
+            <i class="fas fa-times" style="color: #333;"></i>
+        </button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>©2025 Car Rental System</p>
+            </div>
+        </div>
+    </footer>
+
+    <script th:src="@{/js/script.js}"></script>
+    <script th:inline="javascript">
+        let bookingId = /*[[${bookingId}]]*/ 0;
+        console.log(">>> bookingId from Thymeleaf =", bookingId);
+
+        const csrfTokenMeta  = document.querySelector('meta[name="_csrf"]');
+        const csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
+
+        const csrfToken  = csrfTokenMeta  ? csrfTokenMeta.content  : null;
+        const csrfHeader = csrfHeaderMeta ? csrfHeaderMeta.content : 'X-CSRF-TOKEN';
+        console.log(">>> CSRF token =", csrfToken);
+        console.log(">>> CSRF header =", csrfHeader);
+
+        function openImageModal(src) {
+            document.getElementById('modalImage').src = src;
+            document.getElementById('imageModal').style.display = 'flex';
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+
+        async function confirmCheckIn() {
+            if (!confirm('Bạn xác nhận đã nhận xe và đồng ý với biên bản giao xe?')) {
+                return;
+            }
+
+            const confirmBtn = document.querySelector('.btn-confirm');
+            const originalText = confirmBtn.innerHTML;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+            confirmBtn.disabled = true;
+
+            try {
+                const response = await fetch(`/api/bookings/${bookingId}/checkin/guest/confirm`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Idempotency-Key': generateIdempotencyKey(),
+                        ...(csrfToken ? { [csrfHeader]: csrfToken } : {})
+                    }
+                });
+
+                if (response.ok) {
+                    alert('Xác nhận thành công! Chuyến đi đã bắt đầu.');
+                    window.location.href = `/bookings/${bookingId}`;
+                } else {
+                    throw new Error('Có lỗi xảy ra khi xác nhận');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Lỗi: ' + error.message);
+                confirmBtn.innerHTML = originalText;
+                confirmBtn.disabled = false;
+            }
+        }
+
+        function disputeCheckIn() {
+            window.location.href = `/bookings/${bookingId}/checkin-dispute`;
+        }
+
+        function generateIdempotencyKey() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('imageModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeImageModal();
+            }
+        });
+    </script>
+</body>
+</html>

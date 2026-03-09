@@ -1,0 +1,39 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.container {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 30px;
+    margin-top: 40px;
+    margin-bottom: 40px;
+    max-width: 700px;
+}
+
+h1 {
+    color: #343a40;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.form-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.btn-group-action {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+#map {
+    height: 300px;
+    width: 100%;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #ced4da;
+}
