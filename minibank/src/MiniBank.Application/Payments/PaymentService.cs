@@ -13,7 +13,12 @@ public sealed class PaymentService : IPaymentService
     private static readonly Guid DemoMerchantId = Guid.Parse("7E9B2F5A-3D1C-4E6B-8F9A-0B1C2D3E4F5A");
     private const string Currency = "VND";
     private const string RequestRoute = "/api/payments";
+    private const string AuthorizeHoldRouteTemplate = "/api/payments/{0}/authorize-hold";
+    private const string VoidHoldRouteTemplate = "/api/holds/{0}/void";
     private const string Actor = "car-rental-service";
+    private const string CustomerLiabilityAccountCode = "CUSTOMER_LIAB";
+    private const int HoldDurationMinutes = 15;
+    private const byte VoidedHoldStatus = 3;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -110,6 +115,214 @@ public sealed class PaymentService : IPaymentService
             string.Equals(storedProcedureResult.Result, "ALREADY_COMPLETED", StringComparison.OrdinalIgnoreCase));
     }
 
+    public async Task<AuthorizeHoldOperationResult> AuthorizeHoldAsync(
+        Guid paymentId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        var sanitizedIdempotencyKey = idempotencyKey?.Trim();
+        if (string.IsNullOrWhiteSpace(sanitizedIdempotencyKey))
+        {
+            throw new BadRequestException("Idempotency-Key header is required.", "IDEMPOTENCY_KEY_REQUIRED");
+        }
+
+        if (sanitizedIdempotencyKey.Length > 80)
+        {
+            throw new BadRequestException("Idempotency-Key must not exceed 80 characters.", "IDEMPOTENCY_KEY_TOO_LONG");
+        }
+
+        var payment = await _paymentRepository.GetPaymentSummaryAsync(paymentId, cancellationToken);
+        if (payment is null)
+        {
+            throw new BadRequestException("Payment not found.", "PAYMENT_NOT_FOUND");
+        }
+
+        if (payment.Status != 1)
+        {
+            throw new ConflictException("Only payments in created status can be authorized for hold.", "PAYMENT_NOT_AUTHORIZABLE");
+        }
+
+        if (!string.Equals(payment.Currency, Currency, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BadRequestException("Only VND payments are supported for the MVP Authorize Hold flow.", "UNSUPPORTED_CURRENCY");
+        }
+
+        var accountId = await _paymentRepository.GetAccountIdByCodeAsync(CustomerLiabilityAccountCode, cancellationToken);
+        if (accountId is null)
+        {
+            throw new InternalServerException("CUSTOMER_LIAB account was not found in MiniBank DB.", "ACCOUNT_NOT_FOUND");
+        }
+
+        var requestRoute = string.Format(AuthorizeHoldRouteTemplate, paymentId);
+        var requestHash = RequestHashCalculator.CalculateAuthorizeHoldHash(
+            paymentId,
+            payment.AmountMinor,
+            DemoMerchantId,
+            accountId.Value,
+            Currency,
+            requestRoute);
+
+        var idempotencyResult = await _paymentRepository.BeginIdempotencyAsync(
+            new BeginIdempotencyRepositoryRequest(
+                sanitizedIdempotencyKey,
+                DemoMerchantId,
+                requestRoute,
+                requestHash),
+            cancellationToken);
+
+        if (string.Equals(idempotencyResult.Result, "ALREADY_COMPLETED", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(idempotencyResult.ResponseBody))
+            {
+                throw new InternalServerException("Idempotency replay returned an empty response body.", "IDEMPOTENCY_REPLAY_EMPTY");
+            }
+
+            var replayResponse = JsonSerializer.Deserialize<AuthorizeHoldResponse>(idempotencyResult.ResponseBody, JsonOptions);
+            if (replayResponse is null || replayResponse.HoldId == Guid.Empty)
+            {
+                throw new InternalServerException("Unable to parse authorize hold replay response.", "IDEMPOTENCY_REPLAY_INVALID");
+            }
+
+            return new AuthorizeHoldOperationResult(replayResponse, true);
+        }
+
+        var repositoryRequest = new AuthorizeHoldRepositoryRequest(
+            HoldId: Guid.NewGuid(),
+            PaymentId: paymentId,
+            MerchantId: DemoMerchantId,
+            AccountId: accountId.Value,
+            AmountMinor: payment.AmountMinor,
+            Currency: Currency,
+            ExpiresAtUtc: DateTime.UtcNow.AddMinutes(HoldDurationMinutes),
+            Actor: Actor,
+            CorrelationId: null,
+            RequestHash: requestHash);
+
+        var hold = await _paymentRepository.AuthorizeHoldAsync(repositoryRequest, cancellationToken);
+
+        var response = new AuthorizeHoldResponse
+        {
+            HoldId = hold.HoldId,
+            PaymentId = hold.PaymentId,
+            AccountId = hold.AccountId,
+            Status = MapHoldStatus(hold.Status),
+            OriginalAmountMinor = hold.OriginalAmountMinor,
+            RemainingAmountMinor = hold.RemainingAmountMinor,
+            Currency = hold.Currency,
+            ExpiresAtUtc = DateTime.SpecifyKind(hold.ExpiresAtUtc, DateTimeKind.Utc),
+        };
+
+        await _paymentRepository.CompleteIdempotencySuccessAsync(
+            new CompleteIdempotencyRepositoryRequest(
+                sanitizedIdempotencyKey,
+                DemoMerchantId,
+                requestRoute,
+                201,
+                JsonSerializer.Serialize(response, JsonOptions)),
+            cancellationToken);
+
+        return new AuthorizeHoldOperationResult(response, false);
+    }
+
+    public async Task<GetPaymentOperationResult> GetPaymentAsync(
+        Guid paymentId,
+        CancellationToken cancellationToken = default)
+    {
+        var payment = await _paymentRepository.GetPaymentWithLatestHoldAsync(paymentId, cancellationToken);
+        if (payment is null)
+        {
+            throw new BadRequestException("Payment not found.");
+        }
+
+        return new GetPaymentOperationResult(new GetPaymentResponse
+        {
+            PaymentId = payment.PaymentId,
+            PaymentStatus = MapPaymentStatus(payment.PaymentStatus),
+            OrderRef = payment.OrderRef,
+            AmountMinor = payment.AmountMinor,
+            Currency = payment.Currency,
+            HoldId = payment.HoldId,
+            HoldStatus = payment.HoldStatus.HasValue ? MapHoldStatus(payment.HoldStatus.Value) : null,
+            RemainingAmountMinor = payment.RemainingAmountMinor,
+            ExpiresAtUtc = payment.ExpiresAtUtc.HasValue
+                ? DateTime.SpecifyKind(payment.ExpiresAtUtc.Value, DateTimeKind.Utc)
+                : null,
+        });
+    }
+
+    public async Task<VoidHoldOperationResult> VoidHoldAsync(
+        Guid holdId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        var sanitizedIdempotencyKey = idempotencyKey?.Trim();
+        if (string.IsNullOrWhiteSpace(sanitizedIdempotencyKey))
+        {
+            throw new BadRequestException("Idempotency-Key header is required.");
+        }
+
+        if (sanitizedIdempotencyKey.Length > 80)
+        {
+            throw new BadRequestException("Idempotency-Key must not exceed 80 characters.");
+        }
+
+        var requestRoute = string.Format(VoidHoldRouteTemplate, holdId);
+        var request = new VoidHoldRepositoryRequest(
+            sanitizedIdempotencyKey,
+            DemoMerchantId,
+            requestRoute,
+            RequestHashCalculator.CalculateVoidHoldHash(holdId, DemoMerchantId, VoidedHoldStatus, requestRoute),
+            holdId,
+            VoidedHoldStatus,
+            Actor);
+
+        var result = await _paymentRepository.VoidHoldAsync(request, cancellationToken);
+        if (!string.Equals(result.Result, "SUCCESS", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(result.Result, "ALREADY_COMPLETED", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InternalServerException($"Unexpected result from sp_void_hold_with_idem: {result.Result}");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.ResponseBody))
+        {
+            throw new InternalServerException("Stored procedure returned an empty response body.");
+        }
+
+        var storedBody = JsonSerializer.Deserialize<StoredProcedureVoidHoldBody>(result.ResponseBody, JsonOptions);
+        if (storedBody is null || storedBody.HoldId == Guid.Empty)
+        {
+            throw new InternalServerException("Unable to parse void hold response returned by MiniBank SQL procedure.");
+        }
+
+        return new VoidHoldOperationResult(
+            new VoidHoldResponse
+            {
+                HoldId = storedBody.HoldId,
+                VoidStatus = storedBody.VoidStatus,
+                HoldStatus = MapHoldStatus((byte)storedBody.VoidStatus),
+            },
+            string.Equals(result.Result, "ALREADY_COMPLETED", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string MapHoldStatus(byte status) => status switch
+    {
+        1 => "AUTHORIZED",
+        2 => "CAPTURED",
+        3 => "VOIDED",
+        4 => "EXPIRED",
+        _ => "UNKNOWN",
+    };
+
+    private static string MapPaymentStatus(byte status) => status switch
+    {
+        1 => "CREATED",
+        2 => "AUTHORIZED",
+        3 => "FAILED",
+        4 => "VOIDED",
+        5 => "REFUNDED",
+        _ => "UNKNOWN",
+    };
+
     private sealed class StoredProcedurePaymentBody
     {
         [JsonPropertyName("payment_id")]
@@ -117,5 +330,14 @@ public sealed class PaymentService : IPaymentService
 
         [JsonPropertyName("status")]
         public string Status { get; init; } = string.Empty;
+    }
+
+    private sealed class StoredProcedureVoidHoldBody
+    {
+        [JsonPropertyName("hold_id")]
+        public Guid HoldId { get; init; }
+
+        [JsonPropertyName("void_status")]
+        public int VoidStatus { get; init; }
     }
 }
