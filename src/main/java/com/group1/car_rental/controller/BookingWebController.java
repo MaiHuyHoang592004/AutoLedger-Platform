@@ -10,6 +10,8 @@ import com.group1.car_rental.repository.OutboxEventsRepository;
 import com.group1.car_rental.repository.TripInspectionsRepository;
 import com.group1.car_rental.repository.UserRepository;
 import com.group1.car_rental.service.BookingService;
+import com.group1.car_rental.service.exception.MiniBankInsufficientFundsException;
+import com.group1.car_rental.service.exception.MiniBankException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1354,6 +1356,14 @@ public class BookingWebController {
         String message = e.getMessage();
         if (message == null) {
             return "Đã xảy ra lỗi không xác định. Vui lòng thử lại.";
+        }
+
+        if (e instanceof MiniBankInsufficientFundsException) {
+            return "Số dư khả dụng không đủ để giữ tiền thanh toán. Vui lòng thử lại với số dư khác.";
+        }
+
+        if (e instanceof MiniBankException) {
+            return "Hệ thống thanh toán MiniBank đang trả về lỗi. Vui lòng thử lại sau ít phút.";
         }
 
         // Map common technical errors to user-friendly messages
