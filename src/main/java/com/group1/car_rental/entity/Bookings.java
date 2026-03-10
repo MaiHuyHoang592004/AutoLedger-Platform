@@ -50,6 +50,15 @@ public class Bookings {
     @Column(name = "hold_token")
     private UUID holdToken;
 
+    @Column(name = "payment_id")
+    private UUID paymentId;
+
+    @Column(name = "hold_id")
+    private UUID holdId;
+
+    @Column(name = "payment_provider", length = 40)
+    private String paymentProvider;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
