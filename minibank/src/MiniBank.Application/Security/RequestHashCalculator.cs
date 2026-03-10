@@ -25,4 +25,44 @@ public static class RequestHashCalculator
         var payloadJson = JsonSerializer.Serialize(payload);
         return SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson));
     }
+
+    public static byte[] CalculateAuthorizeHoldHash(
+        Guid paymentId,
+        long amountMinor,
+        Guid merchantId,
+        int accountId,
+        string currency,
+        string requestRoute)
+    {
+        var payload = new
+        {
+            paymentId,
+            amountMinor,
+            merchantId,
+            accountId,
+            currency,
+            requestRoute,
+        };
+
+        var payloadJson = JsonSerializer.Serialize(payload);
+        return SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson));
+    }
+
+    public static byte[] CalculateVoidHoldHash(
+        Guid holdId,
+        Guid merchantId,
+        byte voidStatus,
+        string requestRoute)
+    {
+        var payload = new
+        {
+            holdId,
+            merchantId,
+            voidStatus,
+            requestRoute,
+        };
+
+        var payloadJson = JsonSerializer.Serialize(payload);
+        return SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson));
+    }
 }
