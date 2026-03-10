@@ -44,6 +44,10 @@ server:
     include-binding-errors: always  # Hiện lỗi validation
     include-message: always         # Hiện message chi tiết
 
+minibank:
+  api:
+    base-url: http://localhost:5099
+
 logging:
   level:
     root: INFO
