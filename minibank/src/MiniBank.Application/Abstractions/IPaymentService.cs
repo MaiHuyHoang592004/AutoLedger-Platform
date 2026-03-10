@@ -9,4 +9,18 @@ public interface IPaymentService
         CreatePaymentRequest request,
         string? idempotencyKey,
         CancellationToken cancellationToken = default);
+
+    Task<AuthorizeHoldOperationResult> AuthorizeHoldAsync(
+        Guid paymentId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default);
+
+    Task<GetPaymentOperationResult> GetPaymentAsync(
+        Guid paymentId,
+        CancellationToken cancellationToken = default);
+
+    Task<VoidHoldOperationResult> VoidHoldAsync(
+        Guid holdId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default);
 }
