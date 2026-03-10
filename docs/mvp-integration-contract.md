@@ -7,7 +7,7 @@ Trọng tâm của Phase 1: **Chỉ thực hiện luồng Authorize Hold & Void 
 
 ## 1. API Contract MVP (MiniBank Interfaces)
 
-Lớp Web API (.NET) của MiniBank sẽ phơi bày 4 endpoints đồng bộ (REST), đóng vai trò bọc ngoài (wrapper) các Stored Procedure của SQL v6.
+Lớp Web API (.NET) của MiniBank sẽ phơi bày 4 endpoints đồng bộ (REST), đóng vai trò bọc ngoài (wrapper) các Stored Procedure của SQL MiniBank.
 
 ### 1.1. Khởi tạo thanh toán (Init Payment)
 - **Endpoint:** `POST /api/payments`
