@@ -3,6 +3,10 @@ package com.group1.car_rental.service;
 import com.group1.car_rental.entity.*;
 import com.group1.car_rental.entity.CarListings.ListingStatus;
 import com.group1.car_rental.repository.*;
+import com.group1.car_rental.service.dto.MiniBankAuthorizeHoldResponse;
+import com.group1.car_rental.service.dto.MiniBankCreatePaymentResponse;
+import com.group1.car_rental.service.exception.MiniBankException;
+import com.group1.car_rental.service.exception.MiniBankInsufficientFundsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +56,9 @@ public class BookingService {
 
     @Autowired
     private PaymentProvider paymentProvider;
+
+    @Autowired
+    private MiniBankClient miniBankClient;
 
     @Autowired
     private TripInspectionsRepository tripInspectionsRepository;
@@ -361,12 +368,45 @@ public class BookingService {
             throw new RuntimeException("Booking already has a successful authorization");
         }
 
-        // Use payment provider to authorize
-        Payments payment = paymentProvider.authorize(booking, providerRef, totalAmount);
-        Payments savedPayment = paymentsRepository.save(payment);
+        final MiniBankCreatePaymentResponse initPaymentResponse;
+        final MiniBankAuthorizeHoldResponse authorizeHoldResponse;
+        try {
+            initPaymentResponse = miniBankClient.initPayment(
+                buildMiniBankOrderRef(booking),
+                totalAmount,
+                buildMiniBankCommandKey(idempotencyKey, "init"));
 
-        logger.info("Payment AUTH succeeded for booking {}: amount={} provider={} ref={}",
-            booking.getId(), totalAmount, payment.getProvider(), payment.getProviderRef());
+            authorizeHoldResponse = miniBankClient.authorizeHold(
+                initPaymentResponse.paymentId(),
+                buildMiniBankCommandKey(idempotencyKey, "authorize"));
+        } catch (MiniBankInsufficientFundsException ex) {
+            logger.warn("MiniBank insufficient funds for booking {}: {}", booking.getId(), ex.getMessage());
+            throw ex;
+        } catch (MiniBankException ex) {
+            logger.error("MiniBank authorization failed for booking {} with code {}: {}",
+                booking.getId(), ex.getErrorCode(), ex.getMessage());
+            throw ex;
+        }
+
+        Payments savedPayment;
+        try {
+            booking.setPaymentId(initPaymentResponse.paymentId());
+            booking.setHoldId(authorizeHoldResponse.holdId());
+            booking.setPaymentProvider("MINIBANK");
+            bookingsRepository.save(booking);
+
+            Payments payment = new Payments(booking, "AUTH", totalAmount, "MINIBANK");
+            payment.setProviderRef(initPaymentResponse.paymentId().toString());
+            payment.setStatus("SUCCEEDED");
+            payment.setCreatedAt(Instant.now());
+            savedPayment = paymentsRepository.save(payment);
+        } catch (RuntimeException ex) {
+            compensateAuthorizedHold(booking, authorizeHoldResponse.holdId(), idempotencyKey, ex);
+            throw ex;
+        }
+
+        logger.info("MiniBank AUTH succeeded for booking {}: amount={} paymentId={} holdId={}",
+            booking.getId(), totalAmount, initPaymentResponse.paymentId(), authorizeHoldResponse.holdId());
 
         // Create charges breakdown after successful AUTH
         createChargesBreakdown(booking, totalAmount);
@@ -381,9 +421,32 @@ public class BookingService {
 
         // Publish outbox event
         outboxEventsRepository.save(new OutboxEvents("Payment", savedPayment.getId(),
-            "PAYMENT_AUTHORIZED", "{\"bookingId\": " + booking.getId() + ", \"amount\": " + totalAmount + ", \"provider\": \"" + payment.getProvider() + "\"}"));
+            "PAYMENT_AUTHORIZED", "{\"bookingId\": " + booking.getId() + ", \"amount\": " + totalAmount + ", \"provider\": \"MINIBANK\"}"));
 
         return savedPayment;
+    }
+
+    private String buildMiniBankOrderRef(Bookings booking) {
+        if (booking.getId() == null) {
+            throw new IllegalStateException("Booking must be persisted before MiniBank payment initialization.");
+        }
+        return "BOOKING-" + booking.getId();
+    }
+
+    private String buildMiniBankCommandKey(UUID idempotencyKey, String command) {
+        return idempotencyKey + "-" + command;
+    }
+
+    private void compensateAuthorizedHold(Bookings booking, UUID holdId, UUID idempotencyKey, RuntimeException originalException) {
+        try {
+            logger.warn("Compensating MiniBank hold for booking {} using holdId={} due to local persistence failure",
+                booking.getId(), holdId);
+            miniBankClient.voidHold(holdId, buildMiniBankCommandKey(idempotencyKey, "compensate-void"));
+        } catch (Exception compensationException) {
+            logger.error("Compensating MiniBank void-hold failed for booking {} holdId={}: {}",
+                booking.getId(), holdId, compensationException.getMessage(), compensationException);
+            originalException.addSuppressed(compensationException);
+        }
     }
 
     // Helper method to calculate booking total
