@@ -14,6 +14,7 @@ public sealed class PaymentRepository : IPaymentRepository
     private const string CompleteIdempotencySuccessProcedureName = "dbo.sp_idem_complete_success";
     private const string InitializePaymentProcedureName = "dbo.sp_init_payment_with_idem";
     private const string AuthorizeHoldProcedureName = "dbo.sp_authorize_hold";
+    private const string CaptureHoldProcedureName = "dbo.sp_capture_hold_partial_with_idem";
     private const string VoidHoldProcedureName = "dbo.sp_void_hold_with_idem";
     private const byte CompletedIdempotencyStatus = 2;
     private const byte InProgressIdempotencyStatus = 1;
@@ -305,6 +306,113 @@ public sealed class PaymentRepository : IPaymentRepository
         catch (SqlException ex)
         {
             throw new InternalServerException($"MiniBank database error while authorizing hold: {ex.Message}", "AUTHORIZE_HOLD_FAILED");
+        }
+    }
+
+    public async Task<HoldSummary?> GetHoldSummaryAsync(
+        Guid holdId,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT
+                hold_id AS HoldId,
+                payment_id AS PaymentId,
+                account_id AS AccountId,
+                original_amount_minor AS OriginalAmountMinor,
+                remaining_amount_minor AS RemainingAmountMinor,
+                currency AS Currency,
+                status AS Status,
+                expires_at AS ExpiresAtUtc
+            FROM dbo.holds
+            WHERE hold_id = @HoldId;
+            """;
+
+        await using var connection = _sqlConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        return await connection.QuerySingleOrDefaultAsync<HoldSummary>(
+            new CommandDefinition(sql, new { HoldId = holdId }, cancellationToken: cancellationToken));
+    }
+
+    public async Task<CaptureHoldStoredProcedureResult> CaptureHoldAsync(
+        CaptureHoldRepositoryRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await using var connection = _sqlConnectionFactory.CreateConnection();
+            await connection.OpenAsync(cancellationToken);
+
+            var postings = new DataTable();
+            postings.Columns.Add("account_id", typeof(int));
+            postings.Columns.Add("direction", typeof(string));
+            postings.Columns.Add("amount_minor", typeof(long));
+            postings.Rows.Add(request.CustomerLiabilityAccountId, "D", request.CaptureAmountMinor);
+            postings.Rows.Add(request.MerchantLiabilityAccountId, "C", request.CaptureAmountMinor);
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@idem_key", request.IdempotencyKey, DbType.String, size: 80);
+            parameters.Add("@merchant_id", request.MerchantId, DbType.Guid);
+            parameters.Add("@request_route", request.RequestRoute, DbType.String, size: 120);
+            parameters.Add("@request_hash", request.RequestHash, DbType.Binary, size: 32);
+            parameters.Add("@hold_id", request.HoldId, DbType.Guid);
+            parameters.Add("@capture_amount_minor", request.CaptureAmountMinor, DbType.Int64);
+            parameters.Add("@journal_id", request.JournalId, DbType.Guid);
+            parameters.Add("@journal_type", request.JournalType, DbType.String, size: 40);
+            parameters.Add("@reference_id", request.ReferenceId, DbType.Guid);
+            parameters.Add("@currency", request.Currency, DbType.AnsiStringFixedLength, size: 3);
+            parameters.Add("@postings", postings.AsTableValuedParameter("dbo.PostingTvp"));
+            parameters.Add("@actor", request.Actor, DbType.String, size: 80);
+            parameters.Add("@correlation_id", request.CorrelationId, DbType.Guid);
+            parameters.Add("@request_id", request.RequestId, DbType.Guid);
+            parameters.Add("@session_id", request.SessionId, DbType.Guid);
+            parameters.Add("@trace_id", request.TraceId, DbType.StringFixedLength, size: 32);
+            parameters.Add("@idempotency_ttl_hours", request.IdempotencyTtlHours, DbType.Int32);
+            parameters.Add("@in_progress_timeout_seconds", request.InProgressTimeoutSeconds, DbType.Int32);
+
+            return await connection.QuerySingleAsync<CaptureHoldStoredProcedureResult>(
+                new CommandDefinition(
+                    CaptureHoldProcedureName,
+                    parameters,
+                    commandType: CommandType.StoredProcedure,
+                    cancellationToken: cancellationToken));
+        }
+        catch (SqlException ex) when (Contains(ex, "Idempotency key reused with different payload"))
+        {
+            throw new BadRequestException("The same Idempotency-Key was reused with a different payload.", "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
+        }
+        catch (SqlException ex) when (Contains(ex, "Request is still in progress") || Contains(ex, "stale in-progress"))
+        {
+            throw new ConflictException("The capture hold request is already in progress. Please retry shortly.", "IDEMPOTENCY_REQUEST_IN_PROGRESS");
+        }
+        catch (SqlException ex) when (Contains(ex, "Hold not found"))
+        {
+            throw new BadRequestException("Hold not found.", "HOLD_NOT_FOUND");
+        }
+        catch (SqlException ex) when (Contains(ex, "Invalid capture amount") || Contains(ex, "exceeds remaining hold"))
+        {
+            throw new ConflictException("Hold cannot be captured with the requested amount.", "HOLD_NOT_CAPTURABLE");
+        }
+        catch (SqlException ex)
+        {
+            var replayResult = await TryReadCompletedIdempotencyResponseAsync(
+                request.MerchantId,
+                request.RequestRoute,
+                request.IdempotencyKey,
+                ex,
+                cancellationToken);
+
+            if (replayResult is not null)
+            {
+                return new CaptureHoldStoredProcedureResult
+                {
+                    Result = "ALREADY_COMPLETED",
+                    ResponseCode = replayResult.ResponseCode ?? 200,
+                    ResponseBody = replayResult.ResponseBody ?? string.Empty,
+                };
+            }
+
+            throw new InternalServerException($"MiniBank database error while capturing hold: {ex.Message}", "CAPTURE_HOLD_FAILED");
         }
     }
 

@@ -14,11 +14,14 @@ public sealed class PaymentService : IPaymentService
     private const string Currency = "VND";
     private const string RequestRoute = "/api/payments";
     private const string AuthorizeHoldRouteTemplate = "/api/payments/{0}/authorize-hold";
+    private const string CaptureHoldRouteTemplate = "/api/holds/{0}/capture";
     private const string VoidHoldRouteTemplate = "/api/holds/{0}/void";
     private const string Actor = "car-rental-service";
     private const string CustomerLiabilityAccountCode = "CUSTOMER_LIAB";
+    private const string MerchantLiabilityAccountCode = "MERCHANT_LIAB";
     private const int HoldDurationMinutes = 15;
     private const byte VoidedHoldStatus = 3;
+    private const string CaptureJournalType = "HOLD_CAPTURE";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -250,6 +253,142 @@ public sealed class PaymentService : IPaymentService
         });
     }
 
+    public async Task<CaptureHoldOperationResult> CaptureHoldAsync(
+        Guid holdId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        var sanitizedIdempotencyKey = idempotencyKey?.Trim();
+        if (string.IsNullOrWhiteSpace(sanitizedIdempotencyKey))
+        {
+            throw new BadRequestException("Idempotency-Key header is required.", "IDEMPOTENCY_KEY_REQUIRED");
+        }
+
+        if (sanitizedIdempotencyKey.Length > 80)
+        {
+            throw new BadRequestException("Idempotency-Key must not exceed 80 characters.", "IDEMPOTENCY_KEY_TOO_LONG");
+        }
+
+        var hold = await _paymentRepository.GetHoldSummaryAsync(holdId, cancellationToken);
+        if (hold is null)
+        {
+            throw new BadRequestException("Hold not found.", "HOLD_NOT_FOUND");
+        }
+
+        if (!string.Equals(hold.Currency, Currency, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BadRequestException("Only VND holds are supported for the MVP capture flow.", "UNSUPPORTED_CURRENCY");
+        }
+
+        if (hold.Status == 2 && hold.RemainingAmountMinor == 0)
+        {
+            return new CaptureHoldOperationResult(
+                new CaptureHoldResponse
+                {
+                    HoldId = hold.HoldId,
+                    PaymentId = hold.PaymentId,
+                    CapturedAmountMinor = hold.OriginalAmountMinor,
+                    RemainingAmountMinor = hold.RemainingAmountMinor,
+                    Currency = hold.Currency,
+                    HoldStatus = MapHoldStatus(hold.Status),
+                    ProviderRef = $"{hold.PaymentId}:{hold.HoldId}",
+                },
+                true);
+        }
+
+        if (hold.Status != 1)
+        {
+            throw new ConflictException("Only holds in authorized status can be captured.", "HOLD_NOT_CAPTURABLE");
+        }
+
+        if (hold.RemainingAmountMinor <= 0)
+        {
+            throw new ConflictException("Hold has no remaining amount to capture.", "HOLD_NOT_CAPTURABLE");
+        }
+
+        var customerLiabilityAccountId = await _paymentRepository.GetAccountIdByCodeAsync(CustomerLiabilityAccountCode, cancellationToken);
+        if (customerLiabilityAccountId is null)
+        {
+            throw new InternalServerException("CUSTOMER_LIAB account was not found in MiniBank DB.", "ACCOUNT_NOT_FOUND");
+        }
+
+        var merchantLiabilityAccountId = await _paymentRepository.GetAccountIdByCodeAsync(MerchantLiabilityAccountCode, cancellationToken);
+        if (merchantLiabilityAccountId is null)
+        {
+            throw new InternalServerException("MERCHANT_LIAB account was not found in MiniBank DB.", "ACCOUNT_NOT_FOUND");
+        }
+
+        var requestRoute = string.Format(CaptureHoldRouteTemplate, holdId);
+        var referenceId = hold.PaymentId;
+        var journalId = Guid.NewGuid();
+        var requestHash = RequestHashCalculator.CalculateCaptureHoldHash(
+            holdId,
+            hold.PaymentId,
+            hold.RemainingAmountMinor,
+            DemoMerchantId,
+            customerLiabilityAccountId.Value,
+            merchantLiabilityAccountId.Value,
+            Currency,
+            CaptureJournalType,
+            referenceId,
+            requestRoute);
+
+        var result = await _paymentRepository.CaptureHoldAsync(
+            new CaptureHoldRepositoryRequest(
+                sanitizedIdempotencyKey,
+                DemoMerchantId,
+                requestRoute,
+                requestHash,
+                holdId,
+                hold.RemainingAmountMinor,
+                journalId,
+                CaptureJournalType,
+                referenceId,
+                Currency,
+                Actor,
+                customerLiabilityAccountId.Value,
+                merchantLiabilityAccountId.Value),
+            cancellationToken);
+
+        if (!string.Equals(result.Result, "SUCCESS", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(result.Result, "ALREADY_COMPLETED", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InternalServerException($"Unexpected result from sp_capture_hold_partial_with_idem: {result.Result}");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.ResponseBody))
+        {
+            throw new InternalServerException("Stored procedure returned an empty response body.");
+        }
+
+        var storedBody = JsonSerializer.Deserialize<StoredProcedureCaptureHoldBody>(result.ResponseBody, JsonOptions);
+        if (storedBody is null || storedBody.HoldId == Guid.Empty)
+        {
+            throw new InternalServerException("Unable to parse capture hold response returned by MiniBank SQL procedure.");
+        }
+
+        var updatedHold = await _paymentRepository.GetHoldSummaryAsync(holdId, cancellationToken);
+        if (updatedHold is null)
+        {
+            throw new InternalServerException("Hold was not found after capture completed.", "HOLD_NOT_FOUND_AFTER_CAPTURE");
+        }
+
+        var isReplay = string.Equals(result.Result, "ALREADY_COMPLETED", StringComparison.OrdinalIgnoreCase);
+
+        return new CaptureHoldOperationResult(
+            new CaptureHoldResponse
+            {
+                HoldId = updatedHold.HoldId,
+                PaymentId = updatedHold.PaymentId,
+                CapturedAmountMinor = storedBody.CaptureAmountMinor,
+                RemainingAmountMinor = updatedHold.RemainingAmountMinor,
+                Currency = updatedHold.Currency,
+                HoldStatus = MapHoldStatus(updatedHold.Status),
+                ProviderRef = isReplay ? $"{updatedHold.PaymentId}:{updatedHold.HoldId}" : journalId.ToString(),
+            },
+            isReplay);
+    }
+
     public async Task<VoidHoldOperationResult> VoidHoldAsync(
         Guid holdId,
         string? idempotencyKey,
@@ -339,5 +478,14 @@ public sealed class PaymentService : IPaymentService
 
         [JsonPropertyName("void_status")]
         public int VoidStatus { get; init; }
+    }
+
+    private sealed class StoredProcedureCaptureHoldBody
+    {
+        [JsonPropertyName("hold_id")]
+        public Guid HoldId { get; init; }
+
+        [JsonPropertyName("capture_amount_minor")]
+        public long CaptureAmountMinor { get; init; }
     }
 }
