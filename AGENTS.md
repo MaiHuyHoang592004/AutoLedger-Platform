@@ -138,15 +138,36 @@ Those should move into MiniBank.
 MiniBank is an **internal payment core service**.
 
 It is responsible for:
-- payment creation / authorization
+- payment creation
+- payment authorization / hold
+- payment capture
+- payment query
 - idempotency
 - payment state machine
-- webhook verification and deduplication
 - ledger double-entry
-- refund request / approval
 - audit logging for payment actions
-- outbox and event publishing
-- settlement import and reconciliation
+- reversal-based financial correction
+- outbox-ready event generation
+- future webhook verification and deduplication
+- future settlement import and reconciliation
+
+Important interpretation:
+- some capabilities already exist in the DB/domain contract
+- some capabilities are already implemented in current runtime
+- some capabilities are still target architecture or next-phase work
+
+Current runtime emphasis:
+- payment creation
+- authorization hold
+- payment query
+- void authorization
+- capture on trip completion
+
+Not yet primary runtime emphasis:
+- refund end-to-end workflow
+- Kafka publishing in production-like flow
+- settlement import
+- full PSP webhook-driven runtime path
 
 MiniBank is **not** responsible for:
 - booking creation
@@ -166,13 +187,18 @@ It is responsible for:
 - delayed webhook events
 - invalid signature events
 - out-of-order delivery
-- settlement CSV generation
+- future settlement CSV generation
 
 Its purpose is to support:
 - reliability testing
 - operational scenarios
 - DevSecOps demonstrations
 - failure scenario testing
+
+Important runtime note:
+- PSP Sandbox is a **target architecture component**
+- it is important to the long-term platform design
+- but it is **not yet the primary canonical runtime path** for the current thin-slice integration
 
 
 ---
@@ -257,16 +283,21 @@ Important:
 ### 6.3 Payment state
 Payment state belongs to MiniBank.
 
-Preferred initial values:
+Current supported / expected values:
 - `CREATED`
 - `AUTHORIZED`
+- `CAPTURED`
 - `FAILED`
 - `VOIDED`
 - `REFUNDED`
 
 Possible future values:
-- `CAPTURED`
 - `SETTLED`
+
+Important runtime note:
+- current runtime already includes capture as part of the implemented payment lifecycle
+- current capture behavior is **full capture only**
+- the DB/domain model may support more generalized future behavior such as partial capture or richer settlement states
 
 ### 6.4 State mapping principle
 The AI agent must explicitly reason about mappings such as:
@@ -294,21 +325,32 @@ Rules:
 
 ### 7.2 REST for commands
 Use REST for synchronous commands such as:
-- create / authorize payment
-- void payment
-- create refund request
-- approve refund
+- create payment
+- authorize payment / hold
+- capture payment
+- void payment / hold
 - query payment
+- future refund request operations
+
+Important runtime note:
+- capture is already part of the current runtime integration
+- current runtime capture is full-capture-only from the remaining authorized hold amount
 
 ### 7.3 Kafka for events
 Use Kafka for asynchronous events such as:
+- `PaymentCreated`
 - `PaymentAuthorized`
 - `PaymentAuthorizationFailed`
+- `PaymentCaptured`
 - `PaymentVoided`
-- `RefundApproved`
-- future settlement events
+- future refund and settlement events
 
-Car Rental should consume these events to update business state and timeline.
+Car Rental or other downstream consumers may later consume these events to update business state, read models, and timelines.
+
+Important interpretation:
+- Kafka is part of the preferred target architecture
+- but the current runtime integration is still primarily **REST for commands**
+- event-driven publishing should be added incrementally through the outbox pattern
 
 ### 7.4 Eventual consistency
 Do not design for cross-service ACID transactions.
@@ -331,6 +373,11 @@ Preferred direction:
 The likely integration point is the existing payment step around:
 - `POST /bookings/payment/{holdToken}`
 
+For booking completion:
+- preserve the business completion flow in Car Rental
+- use MiniBank capture at the completion seam
+- treat the current runtime capture path as canonical unless the codebase proves otherwise
+
 You must validate the exact classes/controllers/services involved from the codebase.
 
 
@@ -344,19 +391,27 @@ The MVP must be intentionally narrow.
 - keep hold-slot flow
 - create booking at payment step
 - store `payment_id`
+- store `hold_id` when needed for later financial actions
 - update booking state based on payment outcomes
 - handle cancel flows through MiniBank
+- trigger capture through MiniBank on the trip completion path
 
 ### 8.2 MiniBank MVP responsibilities
+- create payment
 - authorize payment
 - query payment
 - void authorization
-- create refund request
-- approve refund
+- capture payment
 - idempotency
 - audit events
 - minimal double-entry ledger
-- outbox + Kafka events
+
+Near-term next phase, but not required to be fully runtime-complete in the current thin slice:
+- refund request workflow
+- refund approval workflow
+- outbox publisher
+- Kafka events
+- webhook verification and deduplication
 
 ### 8.3 PSP Sandbox MVP responsibilities
 - simulate successful payment
@@ -366,18 +421,49 @@ The MVP must be intentionally narrow.
 - simulate invalid signature
 - optionally generate simple settlement CSV
 
+Important interpretation:
+- PSP Sandbox remains in MVP architecture scope
+- but it does not have to be the primary end-to-end runtime path before the MiniBank thin slice is stable
+
 ### 8.4 Explicitly out of scope for now
 Do not introduce in the first implementation:
 - full banking core features
 - loans
 - KYC / AML
 - chargeback workflow
-- partial refund
+- partial refund as a required business flow in the first slice
 - multi-currency
 - multi-tenant PSP routing
 - complex authorization systems
 - rewriting the entire car rental architecture
 - service mesh complexity unless clearly needed later
+
+### 8.5 Current runtime truth vs target architecture
+
+The AI agent must distinguish between:
+- **current runtime truth**
+- **database/domain capability**
+- **target architecture**
+- **historical design docs**
+
+Current runtime truth currently includes:
+- create payment
+- authorize hold
+- query payment
+- void hold
+- capture on trip completion
+
+Current runtime capture behavior:
+- capture is already implemented
+- capture is currently **full capture only**
+- capture is taken from the remaining authorized hold amount
+
+Target architecture still includes:
+- PSP Sandbox-driven reliability scenarios
+- outbox publisher
+- Kafka event publishing
+- refund expansion
+- settlement and reconciliation workflows
 
 
 ---
@@ -466,6 +552,18 @@ Avoid:
 - direct DB coupling across services
 - changes that make the booking flow harder to reason about
 
+## 10.1 Documentation precedence
+
+When documentation appears inconsistent, use this order of precedence:
+
+1. `docs/current-status.md` = current runtime truth
+2. `docs/MiniBank.sql` = DB and financial contract truth
+3. `docs/integration-contract.md` = runtime integration contract
+4. `docs/system-design-overview.md` and `docs/target-architecture.md` = architecture intent
+5. `docs/archive/*` = historical reference only
+
+AI agents must not infer current runtime behavior from archived or outdated docs when `current-status.md` says otherwise.
+
 
 ---
 
@@ -515,23 +613,25 @@ Phase-by-phase plan that includes:
 When proposing a plan, prefer this order:
 
 1. analyze current booking/payment coupling
-2. define integration contract
-3. implement MiniBank core locally
+2. define or sync runtime documentation and source-of-truth hierarchy
+3. implement or stabilize MiniBank core locally
 4. integrate MiniBank into the booking payment step
-5. add PSP Sandbox
-6. add outbox + Kafka
-7. add refund flows
-8. add settlement import
-9. add thin UI / dashboard
-10. add Docker Compose
-11. add CI/CD and security scanning
-12. add Kubernetes + observability + hardening
+5. stabilize capture path in current runtime
+6. add PSP Sandbox more explicitly into reliability flows
+7. add outbox + Kafka
+8. add refund flows
+9. add settlement import / reconciliation
+10. add thin UI / dashboard
+11. add Docker Compose
+12. add CI/CD and security scanning
+13. add Kubernetes + observability + hardening
 
 Do not jump straight to:
 - Kubernetes
 - service mesh
 - complex infra
-before the core business/payment integration works end-to-end.
+
+before the core business/payment integration and runtime truth are stable end-to-end.
 
 
 ---
@@ -547,6 +647,16 @@ A good plan or implementation should satisfy all of the following:
 - enables end-to-end demo
 - enables later DevOps / DevSecOps showcase work
 - is actually feasible for a personal portfolio project
+
+## 13.1 Runtime truth reminder
+
+At the time of writing:
+- MiniBank current thin slice already includes capture
+- Car Rental already calls MiniBank for authorize, void, and capture
+- current capture behavior is full-capture-only
+- some older docs may still describe capture as a later phase
+
+Always validate against `docs/current-status.md` before planning further changes.
 
 
 ---

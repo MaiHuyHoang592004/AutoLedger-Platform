@@ -1,60 +1,52 @@
 # DevSecOps Roadmap
 
-The system follows secure operational practices.
+## 1. Goal
 
----
+Biến project từ “chạy được local” thành “có bằng chứng vận hành, bảo mật, và kiểm soát thay đổi”.
 
-# Observability
+## 2. CI gates
+- build
+- unit tests
+- integration tests
+- lint/style checks
+- fail pipeline nếu test đỏ
 
-Metrics
+## 3. Artifact and supply-chain controls
+- dependency scanning
+- SBOM generation
+- image scanning
+- image signing nếu phase sau cần mạnh hơn
 
-payment latency  
-ledger throughput  
-idempotency conflicts  
+## 4. Runtime hardening
+- non-root containers
+- health checks
+- graceful shutdown
+- environment-based config
+- secret injection thay vì hardcode
 
-Logs
+## 5. Kubernetes direction
+- readiness/liveness probes
+- ConfigMap/Secret
+- resource requests/limits
+- NetworkPolicy
+- rollout strategy
 
-structured logs with trace_id.
+## 6. Security visibility
+- structured logs
+- trace_id propagation
+- audit events
+- PII masking policy khi cần
 
----
+## 7. Operations signals
+- payment latency
+- ledger throughput
+- idempotency conflicts
+- outbox lag
+- duplicate webhook rate
+- reversal frequency
 
-# Audit Monitoring
-
-Audit events store JSON snapshots.
-
-Fields
-
-before_state_json  
-after_state_json
-
-Monitoring rules
-
-unexpected balance change  
-large ledger movement  
-frequent reversals
-
----
-
-# Security
-
-Secrets stored in Vault.
-
-DB access restricted.
-
-Audit tables immutable.
-
----
-
-# Infrastructure
-
-Docker containers  
-Kubernetes deployment  
-GitHub Actions CI/CD  
-
----
-
-# Future Enhancements
-
-Fraud detection  
-ledger reconciliation  
-automated anomaly detection
+## 8. Future controls
+- policy-as-code
+- admission controls
+- secret rotation automation
+- anomaly detection
