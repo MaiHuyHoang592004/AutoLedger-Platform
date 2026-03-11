@@ -32,6 +32,14 @@ public interface IPaymentRepository
         AuthorizeHoldRepositoryRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<HoldSummary?> GetHoldSummaryAsync(
+        Guid holdId,
+        CancellationToken cancellationToken = default);
+
+    Task<CaptureHoldStoredProcedureResult> CaptureHoldAsync(
+        CaptureHoldRepositoryRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<VoidHoldStoredProcedureResult> VoidHoldAsync(
         VoidHoldRepositoryRequest request,
         CancellationToken cancellationToken = default);

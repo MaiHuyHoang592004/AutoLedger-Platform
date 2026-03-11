@@ -19,6 +19,11 @@ public interface IPaymentService
         Guid paymentId,
         CancellationToken cancellationToken = default);
 
+    Task<CaptureHoldOperationResult> CaptureHoldAsync(
+        Guid holdId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default);
+
     Task<VoidHoldOperationResult> VoidHoldAsync(
         Guid holdId,
         string? idempotencyKey,
