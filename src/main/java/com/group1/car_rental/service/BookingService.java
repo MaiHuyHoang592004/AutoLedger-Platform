@@ -4,6 +4,7 @@ import com.group1.car_rental.entity.*;
 import com.group1.car_rental.entity.CarListings.ListingStatus;
 import com.group1.car_rental.repository.*;
 import com.group1.car_rental.service.dto.MiniBankAuthorizeHoldResponse;
+import com.group1.car_rental.service.dto.MiniBankCaptureHoldResponse;
 import com.group1.car_rental.service.dto.MiniBankCreatePaymentResponse;
 import com.group1.car_rental.service.exception.MiniBankException;
 import com.group1.car_rental.service.exception.MiniBankInsufficientFundsException;
@@ -374,11 +375,11 @@ public class BookingService {
             initPaymentResponse = miniBankClient.initPayment(
                 buildMiniBankOrderRef(booking),
                 totalAmount,
-                buildMiniBankCommandKey(idempotencyKey, "init"));
+                buildBookingPaymentInitIdempotencyKey(booking.getId()));
 
             authorizeHoldResponse = miniBankClient.authorizeHold(
                 initPaymentResponse.paymentId(),
-                buildMiniBankCommandKey(idempotencyKey, "authorize"));
+                buildBookingAuthorizeIdempotencyKey(booking.getId()));
         } catch (MiniBankInsufficientFundsException ex) {
             logger.warn("MiniBank insufficient funds for booking {}: {}", booking.getId(), ex.getMessage());
             throw ex;
@@ -433,19 +434,63 @@ public class BookingService {
         return "BOOKING-" + booking.getId();
     }
 
-    private String buildMiniBankCommandKey(UUID idempotencyKey, String command) {
-        return idempotencyKey + "-" + command;
+    private String buildBookingPaymentInitIdempotencyKey(Long bookingId) {
+        return "booking-" + bookingId + "-payment-init";
+    }
+
+    private String buildBookingAuthorizeIdempotencyKey(Long bookingId) {
+        return "booking-" + bookingId + "-authorize";
     }
 
     private void compensateAuthorizedHold(Bookings booking, UUID holdId, UUID idempotencyKey, RuntimeException originalException) {
         try {
             logger.warn("Compensating MiniBank hold for booking {} using holdId={} due to local persistence failure",
                 booking.getId(), holdId);
-            miniBankClient.voidHold(holdId, buildMiniBankCommandKey(idempotencyKey, "compensate-void"));
+            miniBankClient.voidHold(holdId, buildBookingVoidIdempotencyKey(booking.getId()));
         } catch (Exception compensationException) {
             logger.error("Compensating MiniBank void-hold failed for booking {} holdId={}: {}",
                 booking.getId(), holdId, compensationException.getMessage(), compensationException);
             originalException.addSuppressed(compensationException);
+        }
+    }
+
+    private String buildBookingVoidIdempotencyKey(Long bookingId) {
+        return "booking-" + bookingId + "-void";
+    }
+
+    private String buildBookingCaptureIdempotencyKey(Long bookingId) {
+        return "booking-" + bookingId + "-capture";
+    }
+
+    private String resolveCaptureProviderRef(Bookings booking, MiniBankCaptureHoldResponse captureResponse) {
+        if (captureResponse.providerRef() != null && !captureResponse.providerRef().isBlank()) {
+            return captureResponse.providerRef();
+        }
+
+        if (captureResponse.paymentId() != null && captureResponse.holdId() != null) {
+            return captureResponse.paymentId() + ":" + captureResponse.holdId();
+        }
+
+        if (booking.getHoldId() != null) {
+            return booking.getHoldId().toString();
+        }
+
+        return booking.getPaymentId() != null ? booking.getPaymentId().toString() : null;
+    }
+
+    private void tryVoidMiniBankHoldIfPresent(Bookings booking) {
+        if (booking.getHoldId() == null) {
+            logger.debug("Booking {} has no holdId, skipping MiniBank void.", booking.getId());
+            return;
+        }
+
+        try {
+            logger.info("Attempting MiniBank void for booking {} with holdId={}", booking.getId(), booking.getHoldId());
+            miniBankClient.voidHold(booking.getHoldId(), buildBookingVoidIdempotencyKey(booking.getId()));
+            logger.info("MiniBank void succeeded for booking {} with holdId={}", booking.getId(), booking.getHoldId());
+        } catch (Exception ex) {
+            logger.error("MiniBank void failed for booking {} with holdId={}: {}",
+                booking.getId(), booking.getHoldId(), ex.getMessage(), ex);
         }
     }
 
@@ -586,6 +631,11 @@ public class BookingService {
         booking.setUpdatedAt(Instant.now());
         bookingsRepository.save(booking);
 
+        // Canonical runtime truth for pre-capture host rejection:
+        // Car Rental releases business state locally, then asks MiniBank to void the hold.
+        // Post-capture refund expansion remains deferred to a later phase.
+        tryVoidMiniBankHoldIfPresent(booking);
+
         logger.info("Booking {} cancelled by host (user {})",
             bookingId, booking.getListing().getVehicle().getOwner().getId());
 
@@ -632,17 +682,25 @@ public class BookingService {
     public void completeTrip(Long bookingId, UUID idempotencyKey) {
         logger.info("Trip completed for booking {}", bookingId);
 
-        // Check idempotency
-        if (idempotencyKeysRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
-            logger.warn("Duplicate check-out request: booking={} token={}", bookingId, idempotencyKey);
-            throw new RuntimeException("Duplicate check-out request");
-        }
-
-        // Save idempotency key
-        idempotencyKeysRepository.save(new IdempotencyKeys(idempotencyKey));
-
         Bookings booking = bookingsRepository.findById(bookingId)
             .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        boolean duplicateRequest = idempotencyKeysRepository.findByIdempotencyKey(idempotencyKey).isPresent();
+        if (duplicateRequest) {
+            logger.warn("Duplicate check-out request detected: booking={} token={}", bookingId, idempotencyKey);
+            if ("COMPLETED".equals(booking.getStatus())) {
+                logger.info("Booking {} already completed, returning idempotently", bookingId);
+                return;
+            }
+            logger.info("Continuing duplicate check-out request for booking {} because MiniBank capture is replay-safe", bookingId);
+        } else {
+            idempotencyKeysRepository.save(new IdempotencyKeys(idempotencyKey));
+        }
+
+        if ("COMPLETED".equals(booking.getStatus())) {
+            logger.info("Booking {} already completed, returning idempotently", bookingId);
+            return;
+        }
 
         if (!"IN_PROGRESS".equals(booking.getStatus())) {
             logger.warn("Invalid status for check-out: booking={} status={}", bookingId, booking.getStatus());
@@ -656,28 +714,60 @@ public class BookingService {
             throw new RuntimeException("No successful authorization found for capture");
         }
 
-        // Check for existing CAPTURE
         List<Payments> capturePayments = paymentsRepository.findByBookingIdAndTypeAndStatus(booking.getId(), "CAPTURE", "SUCCEEDED");
+        Payments capturePayment;
         if (!capturePayments.isEmpty()) {
-            logger.warn("Booking {} already has successful capture", bookingId);
-            throw new RuntimeException("Booking already has a successful capture");
+            logger.info("Booking {} already has successful local CAPTURE row, finalizing completion idempotently", bookingId);
+            capturePayment = capturePayments.get(0);
+        } else {
+            if (booking.getHoldId() == null) {
+                logger.error("Booking {} has no MiniBank holdId, cannot capture", bookingId);
+                throw new RuntimeException("MiniBank hold information is missing for capture");
+            }
+
+            final MiniBankCaptureHoldResponse captureResponse;
+            try {
+                captureResponse = miniBankClient.captureHold(
+                    booking.getHoldId(),
+                    buildBookingCaptureIdempotencyKey(booking.getId()));
+            } catch (MiniBankException ex) {
+                logger.error("MiniBank capture failed for booking {} holdId={} with code {}: {}",
+                    booking.getId(), booking.getHoldId(), ex.getErrorCode(), ex.getMessage(), ex);
+                throw new RuntimeException("MiniBank capture failed. Booking remains IN_PROGRESS and can be retried.", ex);
+            }
+
+            try {
+                capturePayment = new Payments(booking, "CAPTURE", Math.toIntExact(captureResponse.capturedAmountMinor()), "MINIBANK");
+                capturePayment.setProviderRef(resolveCaptureProviderRef(booking, captureResponse));
+                capturePayment.setStatus("SUCCEEDED");
+                capturePayment.setCreatedAt(Instant.now());
+                capturePayment = paymentsRepository.save(capturePayment);
+            } catch (RuntimeException ex) {
+                logger.error("MiniBank capture succeeded remotely for booking {} but local CAPTURE payment persistence failed. holdId={} paymentId={}",
+                    booking.getId(), booking.getHoldId(), booking.getPaymentId(), ex);
+                throw ex;
+            }
+
+            logger.info("MiniBank CAPTURE succeeded for booking {}: capturedAmount={} paymentId={} holdId={} providerRef={}",
+                bookingId,
+                captureResponse.capturedAmountMinor(),
+                captureResponse.paymentId(),
+                captureResponse.holdId(),
+                capturePayment.getProviderRef());
         }
 
-        Payments authPayment = authPayments.get(0);
-        int captureAmount = authPayment.getAmountCents();
+        int captureAmount = capturePayment.getAmountCents();
 
-        // Use payment provider to capture
-        Payments capturePayment = paymentProvider.capture(booking, authPayment);
-        paymentsRepository.save(capturePayment);
+        try {
+            createPayoutForHost(booking);
 
-        logger.info("Payment CAPTURE succeeded for booking {}: amount={}", bookingId, captureAmount);
-
-        // Create payout for host
-        createPayoutForHost(booking);
-
-        booking.setStatus("COMPLETED");
-        booking.setUpdatedAt(Instant.now());
-        bookingsRepository.save(booking);
+            booking.setStatus("COMPLETED");
+            booking.setUpdatedAt(Instant.now());
+            bookingsRepository.save(booking);
+        } catch (RuntimeException ex) {
+            logger.error("MiniBank capture succeeded remotely for booking {} but local booking completion update failed.", bookingId, ex);
+            throw ex;
+        }
 
         logger.info("Booking {} status updated to COMPLETED", bookingId);
 
@@ -691,6 +781,12 @@ public class BookingService {
 
     // Create payout for host after successful capture
     private void createPayoutForHost(Bookings booking) {
+        List<Payouts> existingPendingPayouts = payoutsRepository.findByBookingIdAndStatus(booking.getId(), "PENDING");
+        if (!existingPendingPayouts.isEmpty()) {
+            logger.info("Pending payout already exists for booking {}, skipping duplicate payout creation", booking.getId());
+            return;
+        }
+
         // Calculate payout amount: base + extra - platform_fee - tax
         List<Charges> charges = chargesRepository.findByBookingId(booking.getId());
 
@@ -748,6 +844,7 @@ public class BookingService {
 
         // Check if already cancelled
         if (booking.getStatus().startsWith("CANCELLED")) {
+            tryVoidMiniBankHoldIfPresent(booking);
             logger.info("Booking {} already cancelled, returning idempotently", bookingId);
             return; // Idempotent - already cancelled
         }
@@ -763,7 +860,9 @@ public class BookingService {
             throw new RuntimeException("Cannot cancel booking in progress");
         }
 
-        // Handle financial operations
+        // Boundary note:
+        // - pre-capture cancellation/rejection canonical runtime truth = MiniBank void hold
+        // - post-capture refund remains a deferred/non-canonical MiniBank runtime path for now
         int refundAmount = handleCancellationRefund(booking, isHostCancellation);
 
         // Release calendar dates
@@ -778,6 +877,8 @@ public class BookingService {
         booking.setUpdatedAt(Instant.now());
         bookingsRepository.save(booking);
 
+        tryVoidMiniBankHoldIfPresent(booking);
+
         logger.info("Booking {} cancelled by {} with refund amount {}",
             bookingId, isHostCancellation ? "HOST" : "GUEST", refundAmount);
 
@@ -787,7 +888,10 @@ public class BookingService {
             (isHostCancellation ? "HOST" : "GUEST") + "\", \"refundAmount\": " + refundAmount + "}"));
     }
 
-    // Handle refund logic based on cancellation policy
+    // Transitional refund boundary:
+    // - before capture, runtime truth is to void the MiniBank hold and release funds safely
+    // - after capture, refund/correction is not yet the canonical MiniBank runtime path in this repo
+    //   and remains a deferred placeholder/business approximation until a dedicated refund phase lands
     private int handleCancellationRefund(Bookings booking, boolean isHostCancellation) {
         List<Payments> authPayments = paymentsRepository.findByBookingIdAndTypeAndStatus(booking.getId(), "AUTH", "SUCCEEDED");
         List<Payments> capturePayments = paymentsRepository.findByBookingIdAndTypeAndStatus(booking.getId(), "CAPTURE", "SUCCEEDED");
@@ -796,11 +900,14 @@ public class BookingService {
             Payments authPayment = authPayments.get(0);
 
             if (capturePayments.isEmpty()) {
-                // Only AUTH exists - VOID the authorization
+                // Legacy/local payment row handling is kept for compatibility,
+                // but the canonical external financial side effect for this pre-capture state
+                // is the MiniBank void triggered by tryVoidMiniBankHoldIfPresent().
                 Payments voidPayment = paymentProvider.voidAuthorization(booking, authPayment);
                 paymentsRepository.save(voidPayment);
                 return authPayment.getAmountCents(); // Full amount voided
             } else {
+                logger.warn("Booking {} entered deferred post-capture refund placeholder path. Canonical MiniBank refund flow is not implemented yet.", booking.getId());
                 // CAPTURE exists - calculate refund based on policy
                 int refundAmount = calculateRefundAmount(booking, isHostCancellation);
                 if (refundAmount > 0) {
@@ -864,26 +971,11 @@ public class BookingService {
             payoutsRepository.save(payout);
         }
     }
+    @Deprecated(forRemoval = false)
     @Transactional
     public void approveBooking(Long bookingId, UUID idempotencyKey) {
-        if (idempotencyKeysRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
-            throw new RuntimeException("Duplicate request");
-        }
-        idempotencyKeysRepository.save(new IdempotencyKeys(idempotencyKey));
-
-        Bookings booking = bookingsRepository.findById(bookingId)
-            .orElseThrow(() -> new RuntimeException("Booking not found"));
-
-        if (!"PENDING_HOST".equals(booking.getStatus())) {
-            throw new RuntimeException("Invalid status");
-        }
-
-        booking.setStatus("PAYMENT_AUTHORIZED");
-        booking.setUpdatedAt(Instant.now());
-        bookingsRepository.save(booking);
-
-        outboxEventsRepository.save(new OutboxEvents("Booking", bookingId,
-            "BOOKING_APPROVED", "{\"bookingId\": " + bookingId + "}"));
+        logger.warn("approveBooking() is a transitional wrapper. Delegating booking {} to canonical confirmBooking() path.", bookingId);
+        confirmBooking(bookingId, idempotencyKey);
     }
 
     // Extended Check-in with inspection data
@@ -1006,7 +1098,8 @@ public class BookingService {
         // Calculate additional charges
         calculateAdditionalCharges(booking, needsCleaning);
 
-        // Process payment capture and completion
+        // Transitional path: preserve host checkout endpoint while delegating
+        // booking completion and MiniBank capture to the canonical completion seam.
         completeTripWithCharges(bookingId, idempotencyKey);
 
         logger.info("Host check-out completed for booking {}, inspection ID: {}", bookingId, inspection.getId());
@@ -1071,43 +1164,12 @@ public class BookingService {
         }
     }
 
-    // Complete trip with charges
+    @Deprecated(forRemoval = false)
+    // Transitional wrapper kept for the host checkout flow.
+    // Canonical completion/capture behavior remains in completeTrip().
     private void completeTripWithCharges(Long bookingId, UUID idempotencyKey) {
-        Bookings booking = bookingsRepository.findById(bookingId)
-            .orElseThrow(() -> new RuntimeException("Booking not found"));
-
-        // Calculate total amount including additional charges
-        List<Charges> allCharges = chargesRepository.findByBookingId(bookingId);
-        int totalAmount = allCharges.stream()
-            .mapToInt(Charges::getAmountCents)
-            .sum();
-
-        // Create CAPTURE payment for additional charges
-        List<Payments> authPayments = paymentsRepository.findByBookingIdAndTypeAndStatus(bookingId, "AUTH", "SUCCEEDED");
-        if (!authPayments.isEmpty()) {
-            Payments authPayment = authPayments.get(0);
-
-            // For demo, assume additional charges are captured immediately
-            // In real implementation, this would handle additional payment if needed
-            if (totalAmount > authPayment.getAmountCents()) {
-                int additionalAmount = totalAmount - authPayment.getAmountCents();
-                logger.info("Additional charges for booking {}: {} VND", bookingId, additionalAmount);
-                // Here you would handle additional payment collection
-            }
-        }
-
-        // Create payout for host (recalculate with additional charges)
-        createPayoutForHost(booking);
-
-        // Update status to COMPLETED
-        booking.setStatus("COMPLETED");
-        booking.setUpdatedAt(Instant.now());
-        bookingsRepository.save(booking);
-
-        outboxEventsRepository.save(new OutboxEvents("Booking", bookingId,
-            "BOOKING_COMPLETED", "{\"bookingId\": " + bookingId + ", \"completedAt\": \"" + Instant.now() + "\"}"));
-
-        logger.info("Trip completed with charges for booking {}", bookingId);
+        logger.info("completeTripWithCharges() is a transitional wrapper for booking {}. Delegating to canonical completeTrip() seam.", bookingId);
+        completeTrip(bookingId, idempotencyKey);
     }
 
     // Calculate outstanding amount for a booking (for surcharge payment)
@@ -1163,7 +1225,9 @@ public class BookingService {
         return Math.max(0, outstanding); // Never negative
     }
 
-    // Process surcharge payment for customer
+    // Deferred/local placeholder path:
+    // surcharge collection here is not yet the canonical MiniBank financial-authority runtime path.
+    // It is intentionally kept local until a later surcharge/payment expansion phase.
     @Transactional
     public void payOutstandingSurcharge(Long bookingId, User customer, UUID idempotencyKey) {
         logger.info("Processing surcharge payment for booking {} by customer {}", bookingId, customer.getId());
@@ -1193,6 +1257,8 @@ public class BookingService {
             logger.info("No outstanding amount for booking {}", bookingId);
             return;
         }
+
+        logger.warn("Booking {} is using deferred/local surcharge payment placeholder logic. MiniBank surcharge runtime integration is not canonical yet.", bookingId);
 
         // Create additional payment (mô phỏng thanh toán surcharge)
         Payments surchargePayment = new Payments();
