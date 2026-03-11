@@ -27,6 +27,7 @@ Mục tiêu là tránh việc lifecycle bị rải rác qua nhiều file.
 ### Notes
 - current runtime has init/authorize/capture
 - refund states may exist in domain model before full runtime implementation is complete
+- current canonical runtime seam for capture is `BookingService.completeTrip()` in Car Rental
 
 ## 3. Hold State Machine
 
@@ -47,6 +48,26 @@ Mục tiêu là tránh việc lifecycle bị rải rác qua nhiều file.
 
 ### Runtime note
 Current runtime capture behavior is full capture only, though DB contract supports partial capture.
+
+Current runtime command seams in Car Rental:
+- host approval canonical path: `confirmBooking()`
+- completion/capture canonical path: `completeTrip()`
+- legacy/transitional wrappers may still exist, but should delegate to the canonical seams
+
+## 3.1 Runtime booking/calendar/payment mapping
+
+Current runtime should be interpreted as:
+
+- `PENDING_HOST` = booking created + payment authorized + calendar still `HOLD`
+- `PAYMENT_AUTHORIZED` = host confirmed + payment still authorized + calendar moved to `BOOKED`
+- `IN_PROGRESS` = trip started after booking approval/authorization state is satisfied
+- `COMPLETED` = MiniBank capture succeeded on canonical completion seam + Car Rental completion persisted
+
+Important note:
+- booking state, calendar state, and payment state remain separate concepts.
+- refund/surcharge placeholder paths that still exist in Car Rental do not redefine the canonical runtime mapping above.
+- pre-capture cancel/reject maps to MiniBank void as canonical runtime truth.
+- post-capture refund and surcharge payment remain deferred/non-canonical runtime paths for now.
 
 ## 4. Refund Request State Machine
 

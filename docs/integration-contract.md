@@ -79,11 +79,32 @@ Car Rental chỉ cần lưu đủ reference để gọi lại MiniBank:
 ### Booking payment creation seam
 Booking/payment creation bên Car Rental phải tạo payment tại MiniBank trước khi đi tiếp authorize.
 
+Runtime hiện tại:
+- `BookingWebController.processPayment()` gọi `createBooking()` rồi `authorizePayment()`
+- `authorizePayment()` dùng MiniBank để:
+  - init payment
+  - authorize hold
+
 ### Completion seam
 Booking/trip completion là seam canonical để gọi capture.
 
+Runtime hiện tại:
+- canonical seam là `BookingService.completeTrip()`
+- host checkout flow vẫn tồn tại, nhưng completion thực tế delegate về `completeTrip()`
+
 ### Cancellation seam
 Booking cancel / host reject là seam canonical để gọi void hold.
+
+Runtime clarification:
+- pre-capture cancel/reject canonical runtime truth = release business state trong Car Rental + call `voidHold()` ở MiniBank
+- post-capture refund/correction chưa phải canonical MiniBank runtime path trong thin slice hiện tại
+
+### Approval seam
+Host approval canonical seam hiện tại là `BookingService.confirmBooking()`.
+
+Transitional path:
+- `BookingService.approveBooking()` vẫn còn tồn tại để tránh phá call path cũ
+- nhưng runtime behavior canonical được gom về `confirmBooking()`
 
 ## 8. Idempotency contract
 
@@ -100,7 +121,15 @@ Mọi write command quan trọng phải dùng idempotency key ổn định.
 - capture: `booking-{bookingId}-capture`
 - void: `booking-{bookingId}-void`
 
-Tên chính xác có thể khác ở code, nhưng nguyên tắc phải deterministic.
+Current runtime note:
+- các MiniBank write operations ở Car Rental hiện đã dùng deterministic business keys theo pattern trên.
+- local idempotency keys cho web/API request ở Car Rental vẫn có thể dùng UUID theo request boundary.
+
+## 8.1 Verification assets currently available
+- `minibank/scripts/test-init-payment.ps1`
+- `minibank/scripts/test-authorize-hold.ps1`
+- `minibank/scripts/test-void-hold.ps1`
+- `docs/runbooks.md` canonical runtime verification checklist
 
 ## 9. Failure semantics
 
@@ -124,5 +153,10 @@ File này không mô tả chi tiết:
 - PSP webhook contract end-to-end
 - settlement batch import
 - chargeback/dispute
+
+Và trong patch set hiện tại cũng chưa mở rộng:
+- refund runtime authority hoàn chỉnh sang MiniBank
+- surcharge payment redesign
+- outbox/Kafka verification scenarios
 
 Các phần đó sẽ được mô tả ở doc khác.
