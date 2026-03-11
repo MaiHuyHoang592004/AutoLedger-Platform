@@ -3,6 +3,7 @@ package com.group1.car_rental.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group1.car_rental.service.dto.MiniBankApiErrorResponse;
 import com.group1.car_rental.service.dto.MiniBankAuthorizeHoldResponse;
+import com.group1.car_rental.service.dto.MiniBankCaptureHoldResponse;
 import com.group1.car_rental.service.dto.MiniBankCreatePaymentRequest;
 import com.group1.car_rental.service.dto.MiniBankCreatePaymentResponse;
 import com.group1.car_rental.service.dto.MiniBankGetPaymentResponse;
@@ -87,6 +88,21 @@ public class HttpMiniBankClient implements MiniBankClient {
             return requireBody(response, "getPayment");
         } catch (HttpStatusCodeException ex) {
             throw mapException("getPayment", ex);
+        }
+    }
+
+    @Override
+    public MiniBankCaptureHoldResponse captureHold(UUID holdId, String idempotencyKey) {
+        try {
+            var response = restTemplate.exchange(
+                baseUrl + "/api/holds/" + holdId + "/capture",
+                HttpMethod.POST,
+                new HttpEntity<>(null, jsonHeaders(idempotencyKey)),
+                MiniBankCaptureHoldResponse.class);
+
+            return requireBody(response, "captureHold");
+        } catch (HttpStatusCodeException ex) {
+            throw mapException("captureHold", ex);
         }
     }
 
