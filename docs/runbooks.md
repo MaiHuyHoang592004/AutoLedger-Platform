@@ -1,5 +1,94 @@
 # Runbooks
 
+## 0. Canonical runtime verification checklist
+
+Mục tiêu của checklist này là khóa runtime truth hiện tại trước khi làm Outbox/Kafka.
+
+### Local run configuration note
+- Car Rental hiện kỳ vọng MiniBank ở `http://localhost:5099` theo `application.yml`.
+- MiniBank `launchSettings.json` mặc định có thể chạy ở `http://localhost:5169`.
+- Khi verify end-to-end local, cần đảm bảo MiniBank được start ở `5099` hoặc cập nhật cấu hình tương ứng trước khi chạy scenario.
+
+### Scenario 1 — Hold -> payment step -> booking create -> authorize
+**Preconditions**
+- SQL Server đang chạy trên `localhost:1433`
+- MiniBank đang chạy ở `http://localhost:5099`
+- Car Rental đang chạy ở `http://localhost:8084`
+- user có thể đăng nhập và listing hợp lệ đang `ACTIVE`
+
+**Action**
+- thực hiện flow giữ chỗ và đi tới `POST /bookings/payment/{holdToken}`
+
+**Expected outcome**
+- booking row được tạo
+- booking state = `PENDING_HOST`
+- Car Rental lưu `payment_id`, `hold_id`, `payment_provider`
+- MiniBank có payment + authorized hold tương ứng
+
+**Where to verify**
+- UI/redirect sau payment step
+- Car Rental logs
+- MiniBank API/DB
+
+### Scenario 2 — Host confirm -> calendar HOLD -> BOOKED
+**Action**
+- host confirm booking qua flow hiện tại
+
+**Expected outcome**
+- canonical seam chạy qua `confirmBooking()`
+- booking state = `PAYMENT_AUTHORIZED`
+- calendar transition: `HOLD -> BOOKED`
+
+**Where to verify**
+- Car Rental DB (`availability_calendar`, `bookings`)
+- host/booking UI
+
+### Scenario 3 — Pre-capture reject/cancel -> MiniBank void
+**Action**
+- reject booking khi còn `PENDING_HOST`, hoặc cancel trước khi capture
+
+**Expected outcome**
+- business state được cancel/reject trong Car Rental
+- canonical external financial side effect = MiniBank `voidHold()`
+- available balance phía MiniBank được restore
+
+**Where to verify**
+- Car Rental logs
+- MiniBank hold status / DB / script `minibank/scripts/test-void-hold.ps1`
+
+### Scenario 4 — Trip completion -> MiniBank capture
+**Action**
+- complete trip qua seam canonical `completeTrip()`
+
+**Expected outcome**
+- MiniBank `captureHold()` được gọi
+- booking state = `COMPLETED`
+- local CAPTURE payment row tồn tại
+- payout không bị tạo duplicate
+
+**Where to verify**
+- Car Rental logs
+- MiniBank DB / API
+
+### Scenario 5 — Duplicate completeTrip protection
+**Action**
+- gọi lặp lại completion cho cùng booking sau khi capture đã thành công
+
+**Expected outcome**
+- không tạo duplicate financial side effect
+- không tạo duplicate local CAPTURE row
+- booking vẫn ở `COMPLETED`
+
+**Where to verify**
+- Car Rental logs
+- `payments` table
+- MiniBank hold/payment state
+
+### Deferred/non-canonical scenarios
+- post-capture refund authoritative qua MiniBank: **deferred**
+- surcharge payment qua MiniBank: **deferred**
+- outbox/Kafka event verification: **deferred**
+
 ## 1. Outbox backlog tăng cao
 
 ### Symptom

@@ -17,6 +17,13 @@ Chứng minh luồng payment cơ bản hoạt động end-to-end giữa Car Rent
 - capture được gọi khi complete trip
 - duplicate request không tạo duplicate financial side effects cơ bản
 
+### Current status update
+- done về mặt thin-slice runtime integration cốt lõi
+- canonical seams đã được cleanup theo hướng nhỏ và an toàn:
+  - approval canonical path = `confirmBooking()`
+  - completion canonical path = `completeTrip()`
+- legacy paths chưa bị xóa, chỉ được giữ như transitional wrappers để tránh phá runtime hiện tại
+
 ### Demo value
 - business service tách khỏi ledger
 - hold/capture flow hoạt động thật
@@ -34,6 +41,15 @@ Chứng minh luồng payment cơ bản hoạt động end-to-end giữa Car Rent
 
 ### Done criteria
 - `current-status.md`, `integration-contract.md`, `source-of-truth.md` khớp runtime
+
+### Current status update
+- source-of-truth hierarchy đã có
+- runtime truth docs đã phản ánh capture là canonical runtime behavior
+- seam cleanup docs cần tiếp tục được giữ sync mỗi khi refactor flow approval/completion
+- sprint kế tiếp ưu tiên verification assets + boundary clarification trước khi bắt đầu Outbox/Kafka
+- local verification run on 2026-03-11 found blockers before Outbox/Kafka design:
+  - MiniBank `authorize-hold` currently fails in local runtime
+  - current local Car Rental DB schema is not aligned with V2 MiniBank booking fields
 
 ### Demo value
 - repo trở nên AI-friendly và reviewer-friendly
@@ -55,6 +71,13 @@ Nâng hệ thống từ REST-only sang REST + async event-driven.
 
 ### Demo value
 - project chuyển từ CRUD integration sang resilience-aware payment platform
+
+### Entry criteria before starting
+- canonical booking approval/completion seams phải ổn định
+- MiniBank cross-service idempotency keys phải deterministic ở các write command chính
+- docs runtime truth phải khớp code tại thời điểm bắt đầu phase này
+- canonical runtime scenarios phải có checklist/script verification rõ ràng
+- local runtime verification must succeed for authorize/void/capture on the current repo state
 
 ## Phase 4 — Refund / Reversal / Reconciliation
 
